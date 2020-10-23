@@ -33,7 +33,7 @@ import cairo
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
-from pympress import builder, extras, evdev_pad, pointer
+from pympress import builder, extras, evdev_pad
 
 def ccw(A, B, C):
     """ Returns True if triangle ABC is counter clockwise
@@ -110,7 +110,10 @@ class Scribbler(builder.Builder):
     drag_button = 0
     #: previous point in right button drag event
     last_del_point = None
+    #: position of the pen (writing pad) pointer (from UI class)
     pen_pointer = None
+    #:
+    pen_event = None
 
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
@@ -140,8 +143,12 @@ class Scribbler(builder.Builder):
         self.get_object("scribble_color").set_rgba(self.scribble_color)
         self.get_object("scribble_width").set_value(self.scribble_width)
 
-        if evdev_pad.start_pen_loop(self):
+        self.pen_event = evdev_pad.PenEventLoop(self)
+        print(self.pen_event.pen_thread)
+        if self.pen_event.pen_thread:
             self.pen_pointer = builder.pen_pointer
+        else:
+            self.pen_event = None
 
 
     def nav_scribble(self, name, ctrl_pressed, command = None):
@@ -166,8 +173,10 @@ class Scribbler(builder.Builder):
         return True
 
     def set_pointer(self, point):
-        self.pen_pointer[0] = point
-        self.redraw_current_slide()
+        if self.pen_pointer:
+            # The event thread might start running a bit too early
+            self.pen_pointer[0] = point
+            self.redraw_current_slide()
 
     def track_scribble(self, point, button):
         """ Draw the scribble following the mouse's moves.
