@@ -162,44 +162,44 @@ class Scribbler(builder.Builder):
         return True
 
 
-    def track_scribble(self, widget, event):
+    def track_scribble(self, point, button):
         """ Draw the scribble following the mouse's moves.
 
         Args:
-            widget (:class:`~Gtk.Widget`):  the widget which has received the event.
-            event (:class:`~Gdk.Event`):  the GTK event.
+            point: point on slide where event occured (self.zoom.get_slide_point(widget, event))
+            button: button code (event.get_button())
 
         Returns:
             `bool`: whether the event was consumed
         """
         if self.scribble_drawing:
-            if event.get_button()[0]:
-                self.drag_button = event.get_button()[1]
+            if button[0]:
+                self.drag_button = button[1]
             if self.drag_button == Gdk.BUTTON_PRIMARY:
-                self.scribble_list[-1][2].append(self.get_slide_point(widget, event))
+                self.scribble_list[-1][2].append(point)
                 self.redraw_current_slide()
                 return True
             elif self.drag_button == Gdk.BUTTON_SECONDARY:
                 if self.last_del_point:
-                    A = self.get_slide_point(widget, event)
                     for scribble in self.scribble_list[:]:
                         for i in range(len(scribble[2]) - 1):
-                            if segments_intersect(A, self.last_del_point, scribble[2][i], scribble[2][i + 1]):
+                            if segments_intersect(point, self.last_del_point, scribble[2][i], scribble[2][i + 1]):
                                 self.scribble_list.remove(scribble)
                                 break
-                self.last_del_point = self.get_slide_point(widget, event)
+                self.last_del_point = point
                 self.redraw_current_slide()
                 return True
 
         return False
 
 
-    def toggle_scribble(self, widget, event):
+    def toggle_scribble(self, e_type, point, button):
         """ Start/stop drawing scribbles.
 
         Args:
-            widget (:class:`~Gtk.Widget`):  the widget which has received the event.
-            event (:class:`~Gdk.Event`):  the GTK event.
+            e_type: Gdk.event type (event.get_event_type())
+            point: point on slide where event occured (self.zoom.get_slide_point(widget, event))
+            button: button code (event.get_button())
 
         Returns:
             `bool`: whether the event was consumed
@@ -207,15 +207,15 @@ class Scribbler(builder.Builder):
         if not self.scribbling_mode:
             return False
 
-        if event.get_event_type() == Gdk.EventType.BUTTON_PRESS:
-            if event.get_button()[1] == Gdk.BUTTON_PRIMARY:
+        if e_type == Gdk.EventType.BUTTON_PRESS:
+            if button[1] == Gdk.BUTTON_PRIMARY:
                 self.scribble_list.append((self.scribble_color, self.scribble_width, []))
-            elif event.get_button()[1] == Gdk.BUTTON_SECONDARY:
+            elif button[1] == Gdk.BUTTON_SECONDARY:
                 self.last_del_point = None
             self.scribble_drawing = True
-            return self.track_scribble(widget, event)
+            return self.track_scribble(point, button)
 
-        elif event.get_event_type() == Gdk.EventType.BUTTON_RELEASE:
+        elif e_type == Gdk.EventType.BUTTON_RELEASE:
             self.scribble_drawing = False
             return True
 

@@ -1042,7 +1042,7 @@ class UI(builder.Builder):
         """
         if self.zoom.track_zoom_target(widget, event):
             return True
-        elif self.scribbler.track_scribble(widget, event):
+        elif self.scribbler.track_scribble(self.zoom.get_slide_point(widget, event), event.get_button()):
             return True
         elif self.laser.track_pointer(widget, event):
             return True
@@ -1064,7 +1064,8 @@ class UI(builder.Builder):
         """
         if self.zoom.toggle_zoom_target(widget, event):
             return True
-        elif self.scribbler.toggle_scribble(widget, event):
+        elif self.scribbler.toggle_scribble(event.get_event_type(),
+                self.zoom.get_slide_point(widget, event), event.get_button()):
             return True
         elif self.laser.toggle_pointer(widget, event):
             return True
