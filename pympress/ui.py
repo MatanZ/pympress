@@ -165,6 +165,8 @@ class UI(builder.Builder):
     #                  "autopage" as page, but also save to file with .pymp extension.
     highlight_mode = "clear"
 
+    pen_pointer = [()]
+
 
     ##############################################################################
     #############################      UI setup      #############################
@@ -241,6 +243,7 @@ class UI(builder.Builder):
         self.highlight_button.set_visible(self.show_bigbuttons)
         self.p_frame_annot.set_visible(self.show_annotations)
         self.laser.activate_pointermode()
+        self.pen_pointer_pix = GdkPixbuf.Pixbuf.new_from_file(util.get_icon_path('pointer_green' + '.png'))
 
 
     def load_icons(self):
@@ -889,6 +892,13 @@ class UI(builder.Builder):
         if widget is self.c_da or widget is self.p_da_cur or widget is self.scribbler.scribble_p_da:
             # do not use the zoom matrix for the pointer, it is relative to the screen not the slide
             self.laser.render_pointer(cairo_context, ww, wh)
+
+            if self.pen_pointer[0]:
+                ww, wh = widget.get_allocated_width(), widget.get_allocated_height()
+                x = self.pen_pointer[0][0] * ww - self.pen_pointer_pix.get_width() / 2
+                y = self.pen_pointer[0][1] * wh - self.pen_pointer_pix.get_height() / 2
+                Gdk.cairo_set_source_pixbuf(cairo_context, self.pen_pointer_pix, x, y)
+                cairo_context.paint()
 
 
     def clear_zoom_cache(self):

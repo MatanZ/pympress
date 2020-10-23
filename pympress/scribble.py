@@ -33,7 +33,7 @@ import cairo
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
-from pympress import builder, extras
+from pympress import builder, extras, evdev_pad, pointer
 
 def ccw(A, B, C):
     """ Returns True if triangle ABC is counter clockwise
@@ -110,6 +110,7 @@ class Scribbler(builder.Builder):
     drag_button = 0
     #: previous point in right button drag event
     last_del_point = None
+    pen_pointer = None
 
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
@@ -139,6 +140,9 @@ class Scribbler(builder.Builder):
         self.get_object("scribble_color").set_rgba(self.scribble_color)
         self.get_object("scribble_width").set_value(self.scribble_width)
 
+        if evdev_pad.start_pen_loop(self):
+            self.pen_pointer = builder.pen_pointer
+
 
     def nav_scribble(self, name, ctrl_pressed, command = None):
         """ Handles an key press event: undo or disable scribbling.
@@ -161,6 +165,9 @@ class Scribbler(builder.Builder):
             return False
         return True
 
+    def set_pointer(self, point):
+        self.pen_pointer[0] = point
+        self.redraw_current_slide()
 
     def track_scribble(self, point, button):
         """ Draw the scribble following the mouse's moves.
@@ -172,7 +179,9 @@ class Scribbler(builder.Builder):
         Returns:
             `bool`: whether the event was consumed
         """
+
         if self.scribble_drawing:
+            self.pen_pointer[0] = point
             if button[0]:
                 self.drag_button = button[1]
             if self.drag_button == Gdk.BUTTON_PRIMARY:
@@ -193,18 +202,19 @@ class Scribbler(builder.Builder):
         return False
 
 
-    def toggle_scribble(self, e_type, point, button):
+    def toggle_scribble(self, e_type, point, button, always=False):
         """ Start/stop drawing scribbles.
 
         Args:
             e_type: Gdk.event type (event.get_event_type())
             point: point on slide where event occured (self.zoom.get_slide_point(widget, event))
             button: button code (event.get_button())
+            always: a boolean allowing scribbling when not in highlight mode
 
         Returns:
             `bool`: whether the event was consumed
         """
-        if not self.scribbling_mode:
+        if not always and not self.scribbling_mode:
             return False
 
         if e_type == Gdk.EventType.BUTTON_PRESS:
