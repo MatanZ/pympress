@@ -127,7 +127,7 @@ def usage():
         notes           = _('Set the position of notes on the pdf page'),
         notes_position  = _('(none, left, right, top, or bottom).'),
         notes_override  = _('Overrides the detection from the file.'),
-        highlight_mode  = _('Select highlighting mode (single, page, or clear)'),
+        highlight_mode  = _('Select highlighting mode (single, page, auto, or clear)'),
         log_level       = _('Set level of verbosity in log file:'),
         log_levels_list = _('{}, {}, {}, {}, or {}').format('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'),
     ))
@@ -155,6 +155,8 @@ def parse_opts(opts):
             if arg.lower()[0] == 't': notes_pos = document.PdfPage.TOP
             if arg.lower()[0] == 'b': notes_pos = document.PdfPage.BOTTOM
         elif opt in ("-m", "--mode"):
+            if arg.lower()[0] == 'a':
+                highlight_mode = 'autopage'
             if arg.lower()[0] == 'c':
                 highlight_mode = 'clear'
             if arg.lower()[0] == 'p':
@@ -219,7 +221,7 @@ def main(argv = sys.argv[1:]):
     logger.setLevel(log_level)
 
     # Create windows
-    gui = ui.UI()
+    gui = ui.UI(highlight_mode)
 
     # Connect proper exit function to interrupt
     signal.signal(signal.SIGINT, gui.save_and_quit)
@@ -232,8 +234,6 @@ def main(argv = sys.argv[1:]):
 
     if notes_pos is not None:
         gui.change_notes_pos(notes_pos, force_change = True)
-
-    gui.highlight_mode = highlight_mode
 
     gui.run()
 

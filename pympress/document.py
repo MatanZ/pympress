@@ -41,13 +41,14 @@ logger = logging.getLogger(__name__)
 import os
 import math
 import enum
+import json
 import tempfile
 import mimetypes
 import webbrowser
 
 import gi
 gi.require_version('Poppler', '0.18')
-from gi.repository import Poppler
+from gi.repository import Poppler, Gdk
 
 try:
     from urllib.parse import urljoin, scheme_chars
@@ -633,6 +634,7 @@ class Document(object):
     page_labels = []
     #: dict of highlights per page number
     scribbles = {}
+    highlight_mode = "clear"
 
     #: callback, to be connected to :func:`~pympress.ui.UI.on_page_change`
     page_change = lambda p: None
@@ -663,6 +665,42 @@ class Document(object):
         # Pages cache
         self.pages_cache = {}
 
+        # Load saved scribbles, if available
+        self.highlight_mode = builder.highlight_mode
+        if self.highlight_mode == "autopage":
+            try:
+                f = open(self.path + '.pymp', "r")
+                scribbles = json.load(f)
+                for key, scribble_list in scribbles.items():
+                    self.scribbles[int(key)] = []
+                    for scribble in scribble_list:
+                        new = list(scribble)
+                        new[0] = Gdk.RGBA(*new[0]['rgba'])
+                        self.scribbles[int(key)].append(tuple(new))
+            except OSError:
+                pass
+            except json.decoder.JSONDecodeError:
+                self.scribbles = {}
+
+    def __del__(self):
+        """ Runs when document is deleted.
+
+        Used to call save_scribbles().
+        """
+        self.save_scribbles()
+
+    def save_scribbles(self):
+        """ Save scribbles list to a file when mode is autopage
+        """
+        if self.highlight_mode == "autopage":
+            class RGBAEncoder(json.JSONEncoder):
+                def default(self, obj):
+                    if isinstance(obj, Gdk.RGBA):
+                        return {'rgba': (obj.red, obj.green, obj.blue, obj.alpha)}
+                    # Let the base class default method raise the TypeError
+                    return json.JSONEncoder.default(self, obj)
+            f = open(self.path + '.pymp', "w")
+            json.dump(self.scribbles, f, cls=RGBAEncoder)
 
     def get_structure(self, index_iter = None):
         """ Gets the structure of the document from its index.
