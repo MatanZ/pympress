@@ -283,7 +283,8 @@ class Scribbler(builder.Builder):
             event (:class:`~Gdk.Event`):  the GTK event triggering this update.
             value (`int`): the width of the scribbles to be drawn
         """
-        self.scribble_width = int(value)
+        # It seems that values returned are not necessarily in range
+        self.scribble_width = max(0.1, int(value*10)/10)
         self.config.set('scribble', 'width', str(self.scribble_width))
 
 
