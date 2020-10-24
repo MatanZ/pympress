@@ -149,7 +149,6 @@ class Scribbler(builder.Builder):
         self.get_object("scribble_width").set_value(self.scribble_width)
 
         self.pen_event = evdev_pad.PenEventLoop(self)
-        print(self.pen_event.pen_thread)
         if self.pen_event.pen_thread:
             self.pen_pointer = builder.pen_pointer
         else:
