@@ -120,6 +120,11 @@ class Scribbler(builder.Builder):
     #:
     pen_event = None
 
+    #: Undo stack
+    undo_stack = []
+    #: Position in undo stack. Allows re-do
+    undo_stack_pos = 0
+
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
 
@@ -169,7 +174,7 @@ class Scribbler(builder.Builder):
         if not self.scribbling_mode:
             return False
         elif command == 'undo_scribble':
-            self.pop_scribble()
+            self.undo()
         elif command == 'cancel':
             self.disable_scribbling()
         else:
@@ -207,6 +212,7 @@ class Scribbler(builder.Builder):
                     for scribble in self.scribble_list[:]:
                         for i in range(len(scribble[3]) - 1):
                             if segments_intersect(point, self.last_del_point, scribble[3][i], scribble[3][i + 1]):
+                                self.add_undo(('d', scribble))
                                 self.scribble_list.remove(scribble)
                                 break
                 self.last_del_point = point
@@ -234,6 +240,7 @@ class Scribbler(builder.Builder):
         if e_type == Gdk.EventType.BUTTON_PRESS:
             if not self.erasing_mode and button[1] == Gdk.BUTTON_PRIMARY:
                 self.scribble_list.append(("segment", self.scribble_color, self.scribble_width, []))
+                self.add_undo(('a', self.scribble_list[-1]))
             elif self.erasing_mode or button[1] == Gdk.BUTTON_SECONDARY:
                 self.last_del_point = None
             self.scribble_drawing = True
@@ -296,18 +303,15 @@ class Scribbler(builder.Builder):
     def clear_scribble(self, *args):
         """ Callback for the scribble clear button, to remove all scribbles.
         """
+        self.add_undo(('c', self.scribble_list[:]))
         del self.scribble_list[:]
 
         self.redraw_current_slide()
 
-
     def pop_scribble(self, *args):
-        """ Callback for the scribble undo button, to undo the last scribble.
+        """ Misnamed method
         """
-        if self.scribble_list:
-            self.scribble_list.pop()
-
-        self.redraw_current_slide()
+        self.undo()
 
 
     def on_configure_da(self, widget, event):
@@ -438,3 +442,35 @@ class Scribbler(builder.Builder):
             self.disable_scribbling()
 
         return True
+
+    def add_undo(self, operation):
+        if self.undo_stack_pos < len(self.undo_stack):
+            del self.undo_stack[self.undo_stack_pos:]
+        self.undo_stack.append(operation)
+        self.undo_stack_pos = self.undo_stack_pos + 1
+
+    def undo(self):
+        if self.undo_stack_pos > 0:
+            self.undo_stack_pos = self.undo_stack_pos - 1
+            op = self.undo_stack[self.undo_stack_pos]
+            if op[0] == 'a':
+                self.scribble_list.remove(op[1])
+            elif op[0] == 'd':
+                self.scribble_list.append(op[1])
+            elif op[0] == 'c':
+                self.scribble_list.extend(op[1])
+
+            self.redraw_current_slide()
+
+    def redo(self):
+        if self.undo_stack_pos < len(self.undo_stack):
+            op = self.undo_stack[self.undo_stack_pos]
+            if op[0] == 'a':
+                self.scribble_list.append(op[1])
+            elif op[0] == 'd':
+                self.scribble_list.remove(op[1])
+            elif op[0] == 'c':
+                self.scribble_list = []
+            self.undo_stack_pos = self.undo_stack_pos + 1
+
+            self.redraw_current_slide()
