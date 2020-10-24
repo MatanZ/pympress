@@ -675,7 +675,7 @@ class Document(object):
                     self.scribbles[int(key)] = []
                     for scribble in scribble_list:
                         new = list(scribble)
-                        new[0] = Gdk.RGBA(*new[0]['rgba'])
+                        new[1] = Gdk.RGBA(*new[1]['rgba'])
                         self.scribbles[int(key)].append(tuple(new))
             except OSError:
                 pass

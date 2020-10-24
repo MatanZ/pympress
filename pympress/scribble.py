@@ -194,14 +194,14 @@ class Scribbler(builder.Builder):
             if button[0]:
                 self.drag_button = button[1]
             if self.drag_button == Gdk.BUTTON_PRIMARY:
-                self.scribble_list[-1][2].append(point)
+                self.scribble_list[-1][3].append(point)
                 self.redraw_current_slide()
                 return True
             elif self.drag_button == Gdk.BUTTON_SECONDARY:
                 if self.last_del_point:
                     for scribble in self.scribble_list[:]:
-                        for i in range(len(scribble[2]) - 1):
-                            if segments_intersect(point, self.last_del_point, scribble[2][i], scribble[2][i + 1]):
+                        for i in range(len(scribble[3]) - 1):
+                            if segments_intersect(point, self.last_del_point, scribble[3][i], scribble[3][i + 1]):
                                 self.scribble_list.remove(scribble)
                                 break
                 self.last_del_point = point
@@ -228,7 +228,7 @@ class Scribbler(builder.Builder):
 
         if e_type == Gdk.EventType.BUTTON_PRESS:
             if button[1] == Gdk.BUTTON_PRIMARY:
-                self.scribble_list.append((self.scribble_color, self.scribble_width, []))
+                self.scribble_list.append(("segment", self.scribble_color, self.scribble_width, []))
             elif button[1] == Gdk.BUTTON_SECONDARY:
                 self.last_del_point = None
             self.scribble_drawing = True
@@ -252,16 +252,17 @@ class Scribbler(builder.Builder):
 
         cairo_context.set_line_cap(cairo.LINE_CAP_ROUND)
 
-        for color, width, points in self.scribble_list:
-            points = [(p[0] * ww, p[1] * wh) for p in points]
+        for stype, color, width, points in self.scribble_list:
+            if stype == "segment":
+                points = [(p[0] * ww, p[1] * wh) for p in points]
 
-            cairo_context.set_source_rgba(*color)
-            cairo_context.set_line_width(width)
-            cairo_context.move_to(*points[0])
+                cairo_context.set_source_rgba(*color)
+                cairo_context.set_line_width(width)
+                cairo_context.move_to(*points[0])
 
-            for p in points[1:]:
-                cairo_context.line_to(*p)
-            cairo_context.stroke()
+                for p in points[1:]:
+                    cairo_context.line_to(*p)
+                cairo_context.stroke()
 
 
     def update_color(self, widget):
