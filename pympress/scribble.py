@@ -135,7 +135,7 @@ class Scribbler(builder.Builder):
 
         self.scribble_color = Gdk.RGBA()
         self.scribble_color.parse(config.get('scribble', 'color'))
-        self.scribble_width = config.getint('scribble', 'width')
+        self.scribble_width = config.getfloat('scribble', 'width')
 
         self.config = config
 
