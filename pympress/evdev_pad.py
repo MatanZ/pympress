@@ -6,10 +6,13 @@
 ---------------------------------------------------------------
 """
 import threading
-import evdev
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gdk
+try:
+    import evdev
+except ModuleNotFoundError:
+    pass
 
 class PenEventLoop():
     pressed_buttons = set()
@@ -23,7 +26,10 @@ class PenEventLoop():
     quit = False
 
     def __init__(self, scr):
-        dev = self.find_device(evdev.ecodes.BTN_TOUCH)
+        try:
+            dev = self.find_device(evdev.ecodes.BTN_TOUCH)
+        except NameError:
+            return
         if dev:
             self.pen_range = (
                 (dev.capabilities()[3][0][1].min, dev.capabilities()[3][0][1].max),
