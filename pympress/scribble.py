@@ -125,6 +125,8 @@ class Scribbler(builder.Builder):
     #: Position in undo stack. Allows re-do
     undo_stack_pos = 0
 
+    mode_buttons = {"draw": None, "erase": None, "box": None}
+
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
 
@@ -152,6 +154,9 @@ class Scribbler(builder.Builder):
         # Presenter-size setup
         self.get_object("scribble_color").set_rgba(self.scribble_color)
         self.get_object("scribble_width").set_value(self.scribble_width)
+
+        for b in self.mode_buttons:
+            self.mode_buttons[b] = self.get_object("scribble_" + b)
 
         self.pen_event = evdev_pad.PenEventLoop(self)
         if self.pen_event.pen_thread:
@@ -432,6 +437,7 @@ class Scribbler(builder.Builder):
         self.off_render.add(self.scribble_overlay)
         self.scribbling_mode = False
         self.drawing_mode = None
+        self.show_button("")
         self.pres_highlight.set_active(self.scribbling_mode)
 
         self.p_central.queue_draw()
@@ -483,14 +489,23 @@ class Scribbler(builder.Builder):
 
         return True
 
+    def show_button(self, button):
+        for b in self.mode_buttons:
+            opacity = 0.2 if b == button else 1
+            self.mode_buttons[b].set_opacity(opacity)
+
     def enable_erase(self, *args):
         self.drawing_mode = "erase"
+        self.show_button("erase")
 
     def enable_draw(self, *args):
         self.drawing_mode = "scribble"
+        self.show_button("draw")
 
     def enable_box(self, *args):
         self.drawing_mode = "box"
+        self.show_button("box")
+
     def add_undo(self, operation):
         if self.undo_stack_pos < len(self.undo_stack):
             del self.undo_stack[self.undo_stack_pos:]
