@@ -211,14 +211,25 @@ class Scribbler(builder.Builder):
                 return True
             elif self.drawing_mode == "erase" or (
                  self.drawing_mode == "scribble" and self.drag_button == Gdk.BUTTON_SECONDARY):
-                if self.last_del_point:
-                    for scribble in self.scribble_list[:]:
-                        for i in range(len(scribble[3]) - 1):
-                            if segments_intersect(point, self.last_del_point, scribble[3][i], scribble[3][i + 1]):
-                                self.add_undo(('d', scribble))
-                                self.scribble_list.remove(scribble)
-                                break
+                for scribble in self.scribble_list[:]:
+                    if scribble[0] == 'segment':
+                        if self.last_del_point:
+                            for i in range(len(scribble[3]) - 1):
+                                if segments_intersect(point, self.last_del_point, scribble[3][i], scribble[3][i + 1]):
+                                    self.add_undo(('d', scribble))
+                                    self.scribble_list.remove(scribble)
+                                    break
+                    if scribble[0] == 'box':
+                        if min(scribble[3][0][0],scribble[3][1][0]) <= point[0] <= max(scribble[3][0][0],scribble[3][1][0]) and \
+                           min(scribble[3][0][1],scribble[3][1][1]) <= point[1] <= max(scribble[3][0][1],scribble[3][1][1]):
+                            self.add_undo(('d', scribble))
+                            self.scribble_list.remove(scribble)
+
                 self.last_del_point = point
+                self.redraw_current_slide()
+                return True
+            elif self.drawing_mode == "box":
+                self.scribble_list[-1][3][1] = point
                 self.redraw_current_slide()
                 return True
 
@@ -247,6 +258,9 @@ class Scribbler(builder.Builder):
             elif self.drawing_mode == "erase" or (
                  self.drawing_mode == "scribble" and button[1] == Gdk.BUTTON_SECONDARY):
                 self.last_del_point = None
+            elif self.drawing_mode == "box":
+                self.scribble_list.append(("box", self.scribble_color, self.scribble_width, [point, point]))
+                self.add_undo(('a', self.scribble_list[-1]))
             self.scribble_drawing = True
             return self.track_scribble(point, button)
 
@@ -279,7 +293,22 @@ class Scribbler(builder.Builder):
                 for p in points[1:]:
                     cairo_context.line_to(*p)
                 cairo_context.stroke()
-
+            if stype == "box":
+                points = [(p[0] * ww, p[1] * wh) for p in points]
+                cairo_context.set_source_rgba(*color)
+                cairo_context.move_to(*points[0])
+                x0, y0 = points[0]
+                x1, y1 = points[1]
+                cairo_context.move_to(x0,y0)
+                cairo_context.line_to(x0,y1)
+                cairo_context.line_to(x1,y1)
+                cairo_context.line_to(x1,y0)
+                cairo_context.close_path()
+                cairo_context.set_source_rgba(*color)
+                cairo_context.fill_preserve()
+                cairo_context.set_source_rgba(*color)
+                cairo_context.set_line_width(width)
+                cairo_context.stroke()
 
     def update_color(self, widget):
         """ Callback for the color chooser button, to set scribbling color.
@@ -453,6 +482,9 @@ class Scribbler(builder.Builder):
 
     def enable_draw(self, *args):
         self.drawing_mode = "scribble"
+
+    def enable_box(self, *args):
+        self.drawing_mode = "box"
     def add_undo(self, operation):
         if self.undo_stack_pos < len(self.undo_stack):
             del self.undo_stack[self.undo_stack_pos:]
