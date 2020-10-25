@@ -175,6 +175,8 @@ class Scribbler(builder.Builder):
             return False
         elif command == 'undo_scribble':
             self.undo()
+        elif command == 'redo':
+            self.redo()
         elif command == 'cancel':
             self.disable_scribbling()
         else:
@@ -305,15 +307,11 @@ class Scribbler(builder.Builder):
     def clear_scribble(self, *args):
         """ Callback for the scribble clear button, to remove all scribbles.
         """
-        self.add_undo(('c', self.scribble_list[:]))
+        if self.scribbling_mode:
+            self.add_undo(('c', self.scribble_list[:]))
         del self.scribble_list[:]
 
         self.redraw_current_slide()
-
-    def pop_scribble(self, *args):
-        """ Misnamed method
-        """
-        self.undo()
 
 
     def on_configure_da(self, widget, event):
@@ -377,6 +375,10 @@ class Scribbler(builder.Builder):
 
         self.scribbling_mode = True
         self.pres_highlight.set_active(self.scribbling_mode)
+
+        self.undo_stack = []
+        self.get_object("scribble_redo").set_sensitive(False)
+        self.get_object("scribble_undo").set_sensitive(False)
 
         return True
 
@@ -456,10 +458,15 @@ class Scribbler(builder.Builder):
             del self.undo_stack[self.undo_stack_pos:]
         self.undo_stack.append(operation)
         self.undo_stack_pos = self.undo_stack_pos + 1
+        self.get_object("scribble_redo").set_sensitive(False)
+        self.get_object("scribble_undo").set_sensitive(True)
 
-    def undo(self):
+    def undo(self, *args):
         if self.undo_stack_pos > 0:
+            self.get_object("scribble_redo").set_sensitive(True)
             self.undo_stack_pos = self.undo_stack_pos - 1
+            if self.undo_stack_pos == 0:
+                self.get_object("scribble_undo").set_sensitive(False)
             op = self.undo_stack[self.undo_stack_pos]
             if op[0] == 'a':
                 self.scribble_list.remove(op[1])
@@ -470,7 +477,7 @@ class Scribbler(builder.Builder):
 
             self.redraw_current_slide()
 
-    def redo(self):
+    def redo(self, *args):
         if self.undo_stack_pos < len(self.undo_stack):
             op = self.undo_stack[self.undo_stack_pos]
             if op[0] == 'a':
@@ -480,5 +487,8 @@ class Scribbler(builder.Builder):
             elif op[0] == 'c':
                 self.scribble_list = []
             self.undo_stack_pos = self.undo_stack_pos + 1
+            if self.undo_stack_pos == len(self.undo_stack):
+                self.get_object("scribble_redo").set_sensitive(False)
+            self.get_object("scribble_undo").set_sensitive(True)
 
             self.redraw_current_slide()
