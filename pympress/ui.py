@@ -167,6 +167,9 @@ class UI(builder.Builder):
 
     pen_pointer = [()]
 
+    hlines = 0
+    vlines = 0
+
 
     ##############################################################################
     #############################      UI setup      #############################
@@ -244,6 +247,8 @@ class UI(builder.Builder):
         self.p_frame_annot.set_visible(self.show_annotations)
         self.laser.activate_pointermode()
         self.pen_pointer_pix = GdkPixbuf.Pixbuf.new_from_file(util.get_icon_path('pointer_green' + '.png'))
+        self.hlines = self.config.getfloat('presenter', 'horizontal_lines')
+        self.vlines = self.config.getfloat('presenter', 'vertical_lines')
 
 
     def load_icons(self):
@@ -894,11 +899,26 @@ class UI(builder.Builder):
             self.laser.render_pointer(cairo_context, ww, wh)
 
             if self.pen_pointer[0]:
-                ww, wh = widget.get_allocated_width(), widget.get_allocated_height()
                 x = self.pen_pointer[0][0] * ww - self.pen_pointer_pix.get_width() / 2
                 y = self.pen_pointer[0][1] * wh - self.pen_pointer_pix.get_height() / 2
                 Gdk.cairo_set_source_pixbuf(cairo_context, self.pen_pointer_pix, x, y)
                 cairo_context.paint()
+
+        if widget is self.scribbler.scribble_p_da:
+            if self.vlines > 1:
+                for i in range(1, int(self.vlines) + 1):
+                    cairo_context.set_source_rgba(0.5, 0.5, 0.5, 0.5)
+                    cairo_context.set_line_width(1)
+                    cairo_context.move_to(ww * i / self.hlines, 0)
+                    cairo_context.line_to(ww * i / self.hlines, wh - 1)
+                cairo_context.stroke()
+            if self.hlines > 1:
+                for i in range(1, int(self.hlines) + 1):
+                    cairo_context.set_source_rgba(0.5, 0.5, 0.5, 0.5)
+                    cairo_context.set_line_width(1)
+                    cairo_context.move_to(0, wh * i / self.hlines)
+                    cairo_context.line_to(ww - 1, wh * i / self.hlines)
+                cairo_context.stroke()
 
 
     def clear_zoom_cache(self):
