@@ -214,7 +214,6 @@ class Scribbler(builder.Builder):
         Returns:
             `bool`: whether the event was consumed
         """
-
         if self.scribble_drawing:
             if self.pen_pointer is not None:
                 self.pen_pointer[0] = point
@@ -235,8 +234,10 @@ class Scribbler(builder.Builder):
                                     self.scribble_list.remove(scribble)
                                     break
                     if scribble[0] == 'box':
-                        if min(scribble[3][0][0],scribble[3][1][0]) <= point[0] <= max(scribble[3][0][0],scribble[3][1][0]) and \
-                           min(scribble[3][0][1],scribble[3][1][1]) <= point[1] <= max(scribble[3][0][1],scribble[3][1][1]):
+                        if min(scribble[3][0][0], scribble[3][1][0]) <= point[0] <= \
+                           max(scribble[3][0][0], scribble[3][1][0]) and \
+                           min(scribble[3][0][1], scribble[3][1][1]) <= point[1] <= \
+                           max(scribble[3][0][1], scribble[3][1][1]):
                             self.add_undo(('d', scribble))
                             self.scribble_list.remove(scribble)
 
@@ -314,10 +315,10 @@ class Scribbler(builder.Builder):
                 cairo_context.move_to(*points[0])
                 x0, y0 = points[0]
                 x1, y1 = points[1]
-                cairo_context.move_to(x0,y0)
-                cairo_context.line_to(x0,y1)
-                cairo_context.line_to(x1,y1)
-                cairo_context.line_to(x1,y0)
+                cairo_context.move_to(x0, y0)
+                cairo_context.line_to(x0, y1)
+                cairo_context.line_to(x1, y1)
+                cairo_context.line_to(x1, y0)
                 cairo_context.close_path()
                 cairo_context.set_source_rgba(*color)
                 cairo_context.fill_preserve()
@@ -344,7 +345,7 @@ class Scribbler(builder.Builder):
             value (`int`): the width of the scribbles to be drawn
         """
         # It seems that values returned are not necessarily in range
-        self.scribble_width = max(0.1, int(value*10)/10)
+        self.scribble_width = max(0.1, int(value * 10) / 10)
         self.config.set('scribble', 'width', str(self.scribble_width))
 
 
