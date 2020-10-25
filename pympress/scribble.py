@@ -182,6 +182,10 @@ class Scribbler(builder.Builder):
             self.undo()
         elif command == 'redo':
             self.redo()
+        elif command == 'scribble':
+            self.enable_scribbling()
+        elif command == 'toggle_erase':
+            self.switch_erasing()
         elif command == 'draw':
             self.enable_draw()
         elif command == 'erase':
@@ -445,14 +449,14 @@ class Scribbler(builder.Builder):
 
         return True
 
-    def switch_erasing(self):
+    def switch_erasing(self, *args):
         """ Toggle the erasing mode.
         """
         if self.drawing_mode == "erase":
             return self.disable_erasing()
         return self.enable_erasing()
 
-    def enable_erasing(self):
+    def enable_erasing(self, *args):
         """ Enable the erasing mode.
 
         Enables scribbling mode if needed.
