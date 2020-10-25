@@ -5,3 +5,7 @@ dist/
 pympress.egg-info/
 
 pympress/share/locale/*/LC_MESSAGES/pympress.mo
+
+*.swp
+pym
+*.gt
