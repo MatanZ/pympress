@@ -255,7 +255,7 @@
             </child>
             <child>
               <object class="GtkButton" id="scribble_box">
-                <property name="label">Box</property>
+                <property name="label">Rectangle</property>
                 <property name="width_request">80</property>
                 <property name="height_request">80</property>
                 <property name="visible">True</property>
@@ -269,6 +269,24 @@
                 <property name="expand">False</property>
                 <property name="fill">True</property>
                 <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="scribble_line">
+                <property name="label">Line</property>
+                <property name="width_request">80</property>
+                <property name="height_request">80</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="always_show_image">True</property>
+                <property name="use_stock">True</property>
+                <signal name="clicked" handler="enable_line" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">3</property>
               </packing>
             </child>
             <child>

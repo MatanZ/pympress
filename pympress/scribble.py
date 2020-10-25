@@ -125,7 +125,7 @@ class Scribbler(builder.Builder):
     #: Position in undo stack. Allows re-do
     undo_stack_pos = 0
 
-    mode_buttons = {"draw": None, "erase": None, "box": None}
+    mode_buttons = {"draw": None, "erase": None, "box": None, "line": None}
 
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
@@ -192,6 +192,8 @@ class Scribbler(builder.Builder):
             self.enable_erasing()
         elif command == 'box':
             self.enable_box()
+        elif command == 'line':
+            self.enable_line()
         elif command == 'cancel':
             self.disable_scribbling()
         else:
@@ -244,7 +246,7 @@ class Scribbler(builder.Builder):
                 self.last_del_point = point
                 self.redraw_current_slide()
                 return True
-            elif self.drawing_mode == "box":
+            elif self.drawing_mode in ("box", "line"):
                 self.scribble_list[-1][3][1] = point
                 self.redraw_current_slide()
                 return True
@@ -276,6 +278,9 @@ class Scribbler(builder.Builder):
                 self.last_del_point = None
             elif self.drawing_mode == "box":
                 self.scribble_list.append(("box", self.scribble_color, self.scribble_width, [point, point]))
+                self.add_undo(('a', self.scribble_list[-1]))
+            elif self.drawing_mode == "line":
+                self.scribble_list.append(("segment", self.scribble_color, self.scribble_width, [point, point]))
                 self.add_undo(('a', self.scribble_list[-1]))
             self.scribble_drawing = True
             return self.track_scribble(point, button)
@@ -510,6 +515,10 @@ class Scribbler(builder.Builder):
     def enable_box(self, *args):
         self.drawing_mode = "box"
         self.show_button("box")
+
+    def enable_line(self, *args):
+        self.drawing_mode = "line"
+        self.show_button("line")
 
     def add_undo(self, operation):
         if self.undo_stack_pos < len(self.undo_stack):
