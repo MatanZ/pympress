@@ -177,6 +177,12 @@ class Scribbler(builder.Builder):
             self.undo()
         elif command == 'redo':
             self.redo()
+        elif command == 'draw':
+            self.enable_draw()
+        elif command == 'erase':
+            self.enable_erasing()
+        elif command == 'box':
+            self.enable_box()
         elif command == 'cancel':
             self.disable_scribbling()
         else:
