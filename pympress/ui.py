@@ -170,6 +170,8 @@ class UI(builder.Builder):
     hlines = 0
     vlines = 0
 
+    show_highlights = True
+
 
     ##############################################################################
     #############################      UI setup      #############################
@@ -889,7 +891,8 @@ class UI(builder.Builder):
             cairo_context.save()
             cairo_context.transform(zoom_matrix)
 
-            self.scribbler.draw_scribble(widget, cairo_context)
+            if self.show_highlights or (self.scribbler.scribbling_mode and widget is self.scribbler.scribble_p_da):
+                self.scribbler.draw_scribble(widget, cairo_context)
             self.zoom.draw_zoom_target(widget, cairo_context)
 
             cairo_context.restore()
@@ -1025,6 +1028,15 @@ class UI(builder.Builder):
             self.pick_file()
         elif command == 'toggle_pointermode':
             self.laser.toggle_pointermode()
+        elif command == 'toggle_highlights':
+            self.show_highlights = not self.show_highlights
+            self.redraw_current_slide()
+        elif command == 'show_highlights':
+            self.show_highlights = True
+            self.redraw_current_slide()
+        elif command == 'hide_highlights':
+            self.show_highlights = False
+            self.redraw_current_slide()
         else:
             if command:
                 logger.error('ERROR: missing command "{}" for {}{}{}{}'
