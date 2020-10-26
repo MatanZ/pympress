@@ -196,6 +196,19 @@ class Scribbler(builder.Builder):
             self.enable_line()
         elif command == 'cancel':
             self.disable_scribbling()
+        elif command == 'pen':
+            pen_str = self.config.get('pens', 'pen' + name)
+            p = pen_str.split(':')
+            if len(p) == 1 or p[1].strip() == "":
+                self.scrible_width = 1.0
+            else:
+                self.scribble_width = float(p[1])
+            self.scribble_color = Gdk.RGBA()
+            if p[0].strip():
+                self.scribble_color.parse(p[0])
+            self.get_object("scribble_color").set_rgba(self.scribble_color)
+            self.get_object("scribble_width").set_value(self.scribble_width)
+
         else:
             return False
         return True
