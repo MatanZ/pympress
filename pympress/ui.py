@@ -177,8 +177,9 @@ class UI(builder.Builder):
     #############################      UI setup      #############################
     ##############################################################################
 
-    def __init__(self, highlight_mode):
+    def __init__(self, highlight_mode, config_override):
         super(UI, self).__init__()
+        self.config.read_dict(config_override)
         self.blanked = self.config.getboolean('content', 'start_blanked')
         self.highlight_mode = highlight_mode
 

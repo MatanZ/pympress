@@ -116,6 +116,7 @@ def usage():
                                          {notes_position}
                                          {notes_override}
     -m mode, --highlight_mode=mode   {highlight_mode}
+    -o section:key=value, --option   {config_option}
     --log=level                      {log_level}
                                          {log_levels_list}
 '''.format(
@@ -128,6 +129,7 @@ def usage():
         notes_position  = _('(none, left, right, top, or bottom).'),
         notes_override  = _('Overrides the detection from the file.'),
         highlight_mode  = _('Select highlighting mode (single, page, auto, or clear)'),
+        config_option   = _('Overrides config file option.'),
         log_level       = _('Set level of verbosity in log file:'),
         log_levels_list = _('{}, {}, {}, {}, or {}').format('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'),
     ))
@@ -143,6 +145,7 @@ def parse_opts(opts):
     log_level = logging.ERROR
     notes_pos = None
     highlight_mode = "clear"
+    config_override = {}
 
     for opt, arg in opts.items():
         if opt in ("-h", "--help"):
@@ -183,8 +186,15 @@ def parse_opts(opts):
                 print(_("Invalid log level \"{}\", try one of {}").format(
                     arg, "DEBUG, INFO, WARNING, ERROR, CRITICAL"
                 ))
+        elif opt in ("-o", "--option"):
+            sect, rest = arg.split(':', 1)
+            key, value = rest.split('=', 1)
+            if sect in config_override:
+                config_override[sect][key] = value
+            else:
+                config_override[sect] = {key: value}
 
-    return ett, log_level, notes_pos, highlight_mode
+    return ett, log_level, notes_pos, highlight_mode, config_override
 
 
 def main(argv = sys.argv[1:]):
@@ -211,17 +221,18 @@ def main(argv = sys.argv[1:]):
     ]))
 
     try:
-        opts, args = getopt.getopt(argv, "hm:n:t:", ["help", "highlight-mode=", "notes=", "talk-time=", "log="])
+        opts, args = getopt.getopt(argv, "hm:n:o:t:",
+                                   ["help", "highlight-mode=", "notes=", "talk-time=", "log=", "option"])
         opts = dict(opts)
     except getopt.GetoptError:
         usage()
         sys.exit(2)
 
-    ett, log_level, notes_pos, highlight_mode = parse_opts(opts)
+    ett, log_level, notes_pos, highlight_mode, config_override = parse_opts(opts)
     logger.setLevel(log_level)
 
     # Create windows
-    gui = ui.UI(highlight_mode)
+    gui = ui.UI(highlight_mode, config_override)
 
     # Connect proper exit function to interrupt
     signal.signal(signal.SIGINT, gui.save_and_quit)
