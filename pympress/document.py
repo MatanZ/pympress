@@ -670,7 +670,7 @@ class Document(object):
         if self.highlight_mode == "autopage":
             try:
                 f = open(self.path + '.pymp', "r")
-                scribbles = json.load(f)
+                scribbles = json.load(f)['scribbles']
                 for key, scribble_list in scribbles.items():
                     self.scribbles[int(key)] = []
                     for scribble in scribble_list:
@@ -700,7 +700,7 @@ class Document(object):
                     # Let the base class default method raise the TypeError
                     return json.JSONEncoder.default(self, obj)
             f = open(self.path + '.pymp', "w")
-            json.dump(self.scribbles, f, cls=RGBAEncoder)
+            json.dump({'scribbles': self.scribbles}, f, cls=RGBAEncoder)
 
     def get_structure(self, index_iter = None):
         """ Gets the structure of the document from its index.
