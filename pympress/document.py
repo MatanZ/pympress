@@ -727,6 +727,56 @@ class Document(object):
         f = open(self.path + '.pymp', "w")
         json.dump(out_dict, f, cls=RGBAEncoder)
 
+    def export_pdf(self, filename=None):
+        if filename is None:
+            filename = self.path + '.pdf'
+        with tempfile.NamedTemporaryFile('w') as f:
+            name = f.name
+            self.export_xopp(f=f)
+            f.flush()
+            os.system(f"xournalpp -p {filename} {name}")
+
+    def export_xopp(self, filename=None, f=None):
+        """ Export modified pdf to xournal++
+        """
+        if filename is None:
+            filename = self.path + '.xopp'
+        if f is None:
+            f = open(filename, "w")
+        print("""<?xml version="1.0" standalone="no"?>
+<xournal creator="pympress" fileversion="4">
+<title>Xournal++ document - see https://github.com/xournalpp/xournalpp</title>
+        """, file=f)
+        for p in range(self.nb_pages):
+            page = self.page(p)
+            print(f"<page width=\"{page.pw}\" height=\"{page.ph}\">", file=f)
+            if self.page_map[p] >= 0:
+                print(f"<background type=\"pdf\" domain=\"absolute\" filename=\"{self.path}\" pageno=\"{self.page_map[p]+1}ll\"/>", file=f)
+            print("<layer>", file=f)
+            if p in self.scribbles:
+                for s in self.scribbles[p]:
+                    if s[0] == 'segment':
+                        c=s[1]
+                        color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(c.red*255), int(c.green*255), int(c.blue*255), int(c.alpha*255))
+                        print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
+                        for i in s[3]:
+                            print("    ", i[0]*page.pw, i[1]*page.ph, file=f)
+                        print("</stroke>", file=f)
+                    if s[0] == 'box':
+                        c=s[1]
+                        color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(c.red*255), int(c.green*255), int(c.blue*255), int(c.alpha*255))
+                        print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\" fill=\"{int(c.alpha*255)}\">", file=f)
+                        print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
+                        print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
+                        print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
+                        print("    ", s[3][0][0]*page.pw, s[3][1][1]*page.ph, file=f)
+                        print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
+                        print("</stroke>", file=f)
+            print("</layer>", file=f)
+            print("</page>", file=f)
+        print("</xournal>", file=f)
+
+
     def get_structure(self, index_iter = None):
         """ Gets the structure of the document from its index.
 

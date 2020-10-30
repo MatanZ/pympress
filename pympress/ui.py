@@ -1064,12 +1064,15 @@ class UI(builder.Builder):
             self.redraw_current_slide()
         elif command == "insert_blank":
             self.insert_page(self.doc.cur_page + 1)
+        elif command == "export_pdf":
+            self.doc.export_pdf()
+        elif command == "export_xopp":
+            self.doc.export_xopp()
         else:
             if command:
                 logger.error('ERROR: missing command "{}" for {}{}{}{}'
                              .format(command, 'ctrl + ' if ctrl_pressed else '', 'shift + ' if shift_pressed else '',
                                      'meta + ' if meta_pressed else '', name))
-
             return False
 
         return True
