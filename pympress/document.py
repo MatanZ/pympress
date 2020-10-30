@@ -830,6 +830,30 @@ class Document(object):
 
         return doc
 
+    def insert_page(self, num):
+        """ Insert an empty page before page num in document
+        """
+        for p in range(self.nb_pages, num, -1):
+            self.page_map[p] = self.page_map[p - 1]
+            if p - 1 in self.pages_cache:
+                self.pages_cache[p] = self.pages_cache[p - 1]
+                del self.pages_cache[p - 1]
+            if p - 1 in self.scribbles:
+                self.scribbles[p] = self.scribbles[p - 1]
+                del self.scribbles[p - 1]
+            if p - 1 in self.history:
+                pos = -1
+                while True:
+                    try:
+                        pos = self.history.index(p - 1, pos + 1)
+                    except ValueError:
+                        break
+                    self.history[pos] = p
+        self.page_labels.insert(num, "")
+        self.page_map[num] = -1
+        self.nb_pages = self.nb_pages + 1
+        if self.cur_page >= num:
+            self.cur_page = self.cur_page + 1
 
     def guess_notes(self, horizontal, vertical):
         """ Get our best guess for the document mode.
@@ -882,7 +906,19 @@ class Document(object):
             return None
 
         if number not in self.pages_cache:
-            self.pages_cache[number] = Page(self.doc.get_page(number), number, self)
+            if self.page_map[number] == -1:
+                self.pages_cache[number] = BlankPage()
+                self.pages_cache[number].page_nb = -1
+                # find which page is first PDF page
+                for k, v in self.page_map.items():
+                    if v == 0:
+                        break
+                if k not in self.pages_cache:
+                    self.pages_cache[k] = Page(self.doc.get_page(0), 0, self)
+                self.pages_cache[number].pw = self.pages_cache[k].pw
+                self.pages_cache[number].ph = self.pages_cache[k].ph
+            else:
+                self.pages_cache[number] = Page(self.doc.get_page(self.page_map[number]), self.page_map[number], self)
         return self.pages_cache[number]
 
 

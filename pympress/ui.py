@@ -703,6 +703,23 @@ class UI(builder.Builder):
         """
         return self.notes_mode
 
+    def insert_page(self, num):
+        """ Insert an empty page before page num in document
+        """
+        self.doc.insert_page(num)
+        self.page_number.set_last(self.doc.pages_number())
+
+        # Clear all widget caches
+        self.cache.clear_cache(self.c_da.get_name())
+        self.cache.clear_cache(self.p_da_cur.get_name())
+        self.cache.clear_cache(self.scribbler.scribble_p_da.get_name())
+        self.cache.clear_cache(self.c_da.get_name() + '_zoomed')
+        self.cache.clear_cache(self.p_da_cur.get_name() + '_zoomed')
+        self.cache.clear_cache(self.scribbler.scribble_p_da.get_name() + '_zoomed')
+
+        # Page numbers might not match now
+        self.page_number.enable_labels(self.doc.has_labels())
+
 
     ##############################################################################
     ############################  Displaying content  ############################
@@ -1045,6 +1062,8 @@ class UI(builder.Builder):
         elif command == 'hide_highlights':
             self.show_highlights = False
             self.redraw_current_slide()
+        elif command == "insert_blank":
+            self.insert_page(self.doc.cur_page + 1)
         else:
             if command:
                 logger.error('ERROR: missing command "{}" for {}{}{}{}'
