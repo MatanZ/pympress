@@ -163,6 +163,7 @@ class Scribbler(builder.Builder):
             self.pen_pointer = builder.pen_pointer
         else:
             self.pen_event = None
+        self.min_distance = builder.min_distance
 
 
     def nav_scribble(self, name, ctrl_pressed, command = None):
@@ -235,6 +236,11 @@ class Scribbler(builder.Builder):
             if button[0]:
                 self.drag_button = button[1]
             if self.drawing_mode == "scribble" and self.drag_button == Gdk.BUTTON_PRIMARY:
+                # Ignore small movements:
+                if self.scribble_list[-1][3] and self.min_distance > 0 and self.min_distance > \
+                    (self.scribble_list[-1][3][-1][0] - point[0]) * (self.scribble_list[-1][3][-1][0] - point[0]) + \
+                    (self.scribble_list[-1][3][-1][1] - point[1]) * (self.scribble_list[-1][3][-1][1] - point[1]):
+                    return True
                 self.scribble_list[-1][3].append(point)
                 self.redraw_current_slide()
                 return True

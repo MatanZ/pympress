@@ -170,6 +170,10 @@ class UI(builder.Builder):
     hlines = 0
     vlines = 0
 
+    #: Minimum distance (square of the distance, actually, in page units) for segments in
+    #  scribbles. Reduces number of points in scribbles made by writing pads.
+    min_distance = 0
+
     show_highlights = True
 
 
@@ -190,6 +194,7 @@ class UI(builder.Builder):
         )
 
         self.show_annotations = self.config.getboolean('presenter', 'show_annotations')
+        self.min_distance = self.config.getfloat('presenter', 'min_distance')
 
         # Surface cache
         self.cache = surfacecache.SurfaceCache(self.doc, self.config.getint('cache', 'maxpages'))
