@@ -242,6 +242,8 @@ class Page(object):
     #: Page handled by this class (instance of :class:`~Poppler.Page`)
     page = None
     #: `int`, number of the current page (starting from 0)
+    #  Number of page in the PDF, not a serial number for display. -1 for
+    #  pages not from the PDF.
     page_nb = -1
     #: `str` representing the page label
     page_label = None
@@ -650,6 +652,8 @@ class Document(object):
     #: callback, to be connected to :func:`~pympress.editable_label.PageNumber.start_editing`
     start_editing_page_number = lambda: None
 
+    page_map = {}
+
     def __init__(self, builder, pop_doc, path, page=0):
         # Connect callbacks
         self.play_media                = builder.get_callback_handler('medias.play')
@@ -660,9 +664,34 @@ class Document(object):
         self.path = path
         self.doc = pop_doc
 
-        # Pages number
-        self.nb_pages = self.doc.get_n_pages()
-        self.page_labels = [self.doc.get_page(n).get_label() for n in range(self.nb_pages)]
+        # Load save file, if available
+        self.page_map = {}
+        self.scribbles = {}
+        self.highlight_mode = builder.highlight_mode
+        try:
+            f = open(self.path + '.pymp', "r")
+            in_dict = json.load(f)
+            self.page_map = {int(key): val for key, val in in_dict.get('page_map', {}).items()}
+            self.nb_pages = len(self.page_map)
+            if self.highlight_mode == "autopage" and 'scribbles' in in_dict:
+                scribbles = in_dict['scribbles']
+                for key, scribble_list in scribbles.items():
+                    self.scribbles[int(key)] = []
+                    for scribble in scribble_list:
+                        scribble[1] = Gdk.RGBA(*scribble[1]['rgba'])
+                    self.scribbles[int(key)] = scribble_list
+        except OSError:
+            pass
+        except json.decoder.JSONDecodeError:
+            self.scribbles = {}
+
+        if not self.page_map:
+            # Pages number
+            self.nb_pages = self.doc.get_n_pages()
+            self.page_map = {x: x for x in range(self.nb_pages)}
+
+        self.page_labels = [self.doc.get_page(self.page_map[n]).get_label() if self.page_map[n] > -1 else ""
+                            for n in self.page_map]
 
         # Number of the current page
         self.cur_page = page
@@ -672,23 +701,6 @@ class Document(object):
         # Pages cache
         self.pages_cache = {}
 
-        # Load saved scribbles, if available
-        self.highlight_mode = builder.highlight_mode
-        if self.highlight_mode == "autopage":
-            try:
-                f = open(self.path + '.pymp', "r")
-                scribbles = json.load(f)['scribbles']
-                for key, scribble_list in scribbles.items():
-                    self.scribbles[int(key)] = []
-                    for scribble in scribble_list:
-                        new = list(scribble)
-                        new[1] = Gdk.RGBA(*new[1]['rgba'])
-                        self.scribbles[int(key)].append(tuple(new))
-            except OSError:
-                pass
-            except json.decoder.JSONDecodeError:
-                self.scribbles = {}
-
     def __del__(self):
         """ Runs when document is deleted.
 
@@ -697,17 +709,23 @@ class Document(object):
         self.save_scribbles()
 
     def save_scribbles(self):
-        """ Save scribbles list to a file when mode is autopage
+        """ Save information that should persist
+
+            * Page map
+            * Scribbles list
         """
+        class RGBAEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, Gdk.RGBA):
+                    return {'rgba': (obj.red, obj.green, obj.blue, obj.alpha)}
+                # Let the base class default method raise the TypeError
+                return json.JSONEncoder.default(self, obj)
+        out_dict = {}
         if self.highlight_mode == "autopage":
-            class RGBAEncoder(json.JSONEncoder):
-                def default(self, obj):
-                    if isinstance(obj, Gdk.RGBA):
-                        return {'rgba': (obj.red, obj.green, obj.blue, obj.alpha)}
-                    # Let the base class default method raise the TypeError
-                    return json.JSONEncoder.default(self, obj)
-            f = open(self.path + '.pymp', "w")
-            json.dump({'scribbles': self.scribbles}, f, cls=RGBAEncoder)
+            out_dict['scribbles'] = self.scribbles
+        out_dict['page_map'] = self.page_map
+        f = open(self.path + '.pymp', "w")
+        json.dump(out_dict, f, cls=RGBAEncoder)
 
     def get_structure(self, index_iter = None):
         """ Gets the structure of the document from its index.
@@ -860,7 +878,7 @@ class Document(object):
         Returns:
             :class:`~pympress.document.Page`: the wanted page, or `None` if it does not exist
         """
-        if number >= self.nb_pages or number < 0:
+        if number not in self.page_map:
             return None
 
         if number not in self.pages_cache:

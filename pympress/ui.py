@@ -751,7 +751,7 @@ class UI(builder.Builder):
         self.page_number.update_jump_label(page_cur.label())
 
         # Prerender the 4 next pages and the 2 previous ones
-        cur = page_cur.number()
+        cur = self.doc.cur_page
         page_max = min(self.doc.pages_number(), cur + 5)
         page_min = max(0, cur - 2)
         for p in list(range(cur + 1, page_max)) + list(range(cur, page_min, -1)):
@@ -773,7 +773,7 @@ class UI(builder.Builder):
         self.annotations.add_annotations(page_cur.get_annotations())
 
         # Page change: resynchronize miniatures
-        self.page_preview_nb = page_cur.number()
+        self.page_preview_nb = self.doc.cur_page
 
         # Aspect ratios and queue redraws
         self.p_frame_notes.set_property('ratio', page_cur.get_aspect_ratio(self.notes_mode))
@@ -846,12 +846,15 @@ class UI(builder.Builder):
             # Current page
             if self.blanked:
                 return
-            page = self.doc.page(self.doc.current_page().number())
+            page = self.doc.page(self.doc.cur_page)
+            nb = self.doc.cur_page
         elif widget is self.p_da_notes or widget is self.p_da_cur or widget is self.scribbler.scribble_p_da:
             # Current page 'preview'
             page = self.doc.page(self.page_preview_nb)
+            nb = self.page_preview_nb
         else:
             page = self.doc.page(self.page_preview_nb + 1)
+            nb = self.page_preview_nb + 1
             # No next page: just return so we won't draw anything
             if page is None:
                 return
@@ -860,7 +863,6 @@ class UI(builder.Builder):
             return
 
         name = widget.get_name()
-        nb = page.number()
         wtype = self.cache.get_widget_type(name)
         ww, wh = widget.get_allocated_width(), widget.get_allocated_height()
 
