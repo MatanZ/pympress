@@ -361,7 +361,11 @@ class Page(object):
         elif link_type == Poppler.ActionType.GOTO_DEST:
             dest_type = action.goto_dest.dest.type
             if dest_type == Poppler.DestType.NAMED:
-                dest = self.parent.doc.find_dest(action.goto_dest.dest.named_dest)
+                try:
+                    dest = self.parent.doc.find_dest(action.goto_dest.dest.named_dest)
+                except UnicodeDecodeError:
+                    # What to do with non-Unicode?
+                    return lambda: None
                 if dest:
                     return Link.build_closure(self.parent.goto, dest.page_num - 1)
                 else:
