@@ -176,6 +176,9 @@ class UI(builder.Builder):
 
     show_highlights = True
 
+    draw_selected = True
+    selected_timeout = None
+
 
     ##############################################################################
     #############################      UI setup      #############################
@@ -452,6 +455,11 @@ class UI(builder.Builder):
             c_monitor = self.c_win.get_screen().get_monitor_at_window(self.c_frame.get_parent_window())
             self.config.set('content', 'monitor', str(c_monitor))
 
+
+    def redraw_selected(self):
+        self.draw_selected = not self.draw_selected
+        self.scribbler.scribble_p_da.queue_draw()
+        return True
 
     def redraw_panes(self):
         """ Handler for :class:`~Gtk.Paned`'s resizing signal.
@@ -917,7 +925,12 @@ class UI(builder.Builder):
             cairo_context.transform(zoom_matrix)
 
             if self.show_highlights or (self.scribbler.scribbling_mode and widget is self.scribbler.scribble_p_da):
-                self.scribbler.draw_scribble(widget, cairo_context)
+                self.scribbler.draw_scribble(widget, cairo_context,
+                                             self.draw_selected or widget is not self.scribbler.scribble_p_da)
+                if widget is self.scribbler.scribble_p_da and self.scribbler.selected and \
+                    not self.selected_timeout:
+                    self.selected_timeout = GLib.timeout_add(500, self.redraw_selected)
+
             self.zoom.draw_zoom_target(widget, cairo_context)
 
             cairo_context.restore()
