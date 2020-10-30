@@ -581,6 +581,9 @@ class Page(object):
         cr.rectangle(0, 0, pw, ph)
         cr.fill()
 
+        if not self.page:
+            return
+
         # For "regular" pages, there is no problem: just render them.
         # For other pages (i.e. half of a page), the widget already has correct
         # dimensions so we don't need to deal with that. But for right and bottom
@@ -1108,18 +1111,14 @@ class Document(object):
         self.temp_files.clear()
 
 
-class EmptyPage(Page):
-    """ A dummy page, placeholder for when there are no valid pages around.
-
-    This page is a non-notes page with an aspect ratio of 1.3 and nothing else inside.
-    Also, it has no "rendering" capability, and is made harmless by overriding its render function.
+class BlankPage(Page):
+    """ A blank page
     """
-
     def __init__(self):
         self.page = None
         self.page_nb = -1
         self.parent = None
-        self.page_label = None
+        self.page_label = "-"
         self.links = []
         self.medias = []
         self.annotations = []
@@ -1127,7 +1126,12 @@ class EmptyPage(Page):
         # by default, anything that will have a 1.3 asapect ratio
         self.pw, self.ph = 1.3, 1.0
 
+class EmptyPage(BlankPage):
+    """ A dummy page, placeholder for when there are no valid pages around.
 
+    This page is a non-notes page with an aspect ratio of 1.3 and nothing else inside.
+    Also, it has no "rendering" capability, and is made harmless by overriding its render function.
+    """
     def render_cairo(self, cr, ww, wh, dtype=PdfPage.FULL):
         """ Overriding this purely for safety: make sure we do not accidentally try to render.
 
