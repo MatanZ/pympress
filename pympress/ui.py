@@ -524,6 +524,8 @@ class UI(builder.Builder):
         if bool(self.c_win.get_window().get_state() & Gdk.WindowState.FULLSCREEN):
             util.set_screensaver(False, self.c_win.get_window())
 
+        if self.highlight_mode in ('autopage') and self.doc.cur_page >= 0:
+            self.doc.scribbles[self.doc.cur_page] = self.scribbler.scribble_list[:]
         self.doc.save_scribbles()
         self.config.save_config()
         self.p_win.destroy()
@@ -1078,8 +1080,13 @@ class UI(builder.Builder):
         elif command == "insert_blank":
             self.insert_page(self.doc.cur_page + 1)
         elif command == "export_pdf":
+            # Make sure the current scribbles are also exported
+            if self.highlight_mode in ('autopage') and self.doc.cur_page >= 0:
+                self.doc.scribbles[self.doc.cur_page] = self.scribbler.scribble_list[:]
             self.doc.export_pdf()
         elif command == "export_xopp":
+            if self.highlight_mode in ('autopage') and self.doc.cur_page >= 0:
+                self.doc.scribbles[self.doc.cur_page] = self.scribbler.scribble_list[:]
             self.doc.export_xopp()
         else:
             if command:
