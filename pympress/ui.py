@@ -783,7 +783,7 @@ class UI(builder.Builder):
             self.cache.prerender(p)
 
 
-    def on_page_change(self, unpause=True):
+    def on_page_change(self, unpause=True, keep_scribbles=False):
         """ Switch to another page and display it.
 
         This is a kind of event which is supposed to be called only from the
@@ -829,12 +829,12 @@ class UI(builder.Builder):
         # Handle saved scribbles
         if self.highlight_mode in ('autopage', 'page') and len(self.doc.history) > 1:
             self.doc.scribbles[self.doc.history[-2]] = self.scribbler.scribble_list[:]
-        if self.highlight_mode in ('autopage', 'clear', 'page'):
+        if self.highlight_mode in ('autopage', 'clear', 'page') and not keep_scribbles:
             self.scribbler.clear_scribble()
         if self.highlight_mode in ('autopage', 'page'):
             try:
                 if self.doc and self.page_preview_nb in self.doc.scribbles:
-                    self.scribbler.scribble_list = self.doc.scribbles[self.page_preview_nb][:]
+                    self.scribbler.scribble_list += self.doc.scribbles[self.page_preview_nb][:]
             except AttributeError:
                 pass
 
@@ -1016,7 +1016,7 @@ class UI(builder.Builder):
         elif command in {'next', 'next_label'} and self.talk_time.unpause():
             pass
         elif command == 'next':
-            self.doc.goto_next()
+            self.doc.goto_next(keep_scribbles=shift_pressed)
         elif command == 'next_label':
             self.doc.label_next()
         elif command == 'prev':

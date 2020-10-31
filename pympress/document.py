@@ -999,7 +999,7 @@ class Document(object):
         return self.nb_pages
 
 
-    def _do_page_change(self, number):
+    def _do_page_change(self, number, keep_scribbles=False):
         """ Perform the actual change of page and UI notification.
 
         The page number is **not** checked here, so it must be within bounds already.
@@ -1008,7 +1008,7 @@ class Document(object):
             number (`int`):  number of the destination page
         """
         self.cur_page = number
-        self.page_change()
+        self.page_change(keep_scribbles=keep_scribbles)
 
 
     def has_labels(self):
@@ -1057,7 +1057,7 @@ class Document(object):
             return None
 
 
-    def goto(self, number):
+    def goto(self, number, keep_scribbles=False):
         """ Switch to another page.
 
         Args:
@@ -1075,13 +1075,13 @@ class Document(object):
                 self.history = self.history[:self.hist_pos]
             self.history.append(number)
 
-            self._do_page_change(number)
+            self._do_page_change(number, keep_scribbles=keep_scribbles)
 
 
-    def goto_next(self, *args):
+    def goto_next(self, *args, keep_scribbles=False):
         """ Switch to the next page.
         """
-        self.goto(self.cur_page + 1)
+        self.goto(self.cur_page + 1, keep_scribbles=keep_scribbles)
 
 
     def goto_prev(self, *args):
