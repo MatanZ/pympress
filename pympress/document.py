@@ -755,7 +755,7 @@ class Document(object):
             print("<layer>", file=f)
             if p in self.scribbles:
                 for s in self.scribbles[p]:
-                    if s[0] == 'segment':
+                    if s[0] == 'segment' and len(s[3]) > 1:
                         c=s[1]
                         color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(c.red*255), int(c.green*255), int(c.blue*255), int(c.alpha*255))
                         print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
