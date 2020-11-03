@@ -221,21 +221,27 @@ class Scribbler(builder.Builder):
         elif command == 'cancel':
             self.disable_scribbling()
         elif command == 'pen':
-            pen_str = self.config.get('pens', 'pen' + name)
-            p = pen_str.split(':')
-            if len(p) == 1 or p[1].strip() == "":
-                self.scrible_width = 1.0
-            else:
-                self.scribble_width = float(p[1])
-            self.scribble_color = Gdk.RGBA()
-            if p[0].strip():
-                self.scribble_color.parse(p[0])
-            self.get_object("scribble_color").set_rgba(self.scribble_color)
-            self.get_object("scribble_width").set_value(self.scribble_width)
-
+            self.set_pen(name)
         else:
             return False
         return True
+
+    def set_pen(self, name):
+        pen_str = self.config.get('pens', 'pen' + name)
+        p = pen_str.split(':')
+        if len(p) == 1 or p[1].strip() == "":
+            self.scrible_width = 1.0
+        else:
+            self.scribble_width = float(p[1])
+        self.scribble_color = Gdk.RGBA()
+        if p[0].strip():
+            self.scribble_color.parse(p[0])
+        self.get_object("scribble_color").set_rgba(self.scribble_color)
+        self.get_object("scribble_width").set_value(self.scribble_width)
+        try:
+            pen_num = int(name)
+        except ValueError:
+            pass
 
     def set_pointer(self, point):
         if self.pen_pointer:
