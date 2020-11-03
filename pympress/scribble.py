@@ -288,7 +288,8 @@ class Scribbler(builder.Builder):
                 return True
             elif self.drawing_mode == "select_t":
                 for scribble in self.scribble_list[:]:
-                    if intersects(self.last_del_point, point, scribble):
+                    if scribble not in self.stroke_selected and intersects(self.last_del_point, point, scribble):
+                        self.stroke_selected.append(scribble)
                         if scribble in self.selected:
                             self.selected.remove(scribble)
                         else:
@@ -321,6 +322,7 @@ class Scribbler(builder.Builder):
             elif self.drawing_mode in ("erase", "select_t") or (
                  self.drawing_mode == "scribble" and button[1] == Gdk.BUTTON_SECONDARY):
                 self.last_del_point = None
+                self.stroke_selected = []
             elif self.drawing_mode == "box":
                 self.scribble_list.append(["box", self.scribble_color, self.scribble_width, [point, point]])
                 self.add_undo(('a', self.scribble_list[-1]))
