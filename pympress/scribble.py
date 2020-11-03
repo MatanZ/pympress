@@ -136,6 +136,8 @@ class Scribbler(builder.Builder):
     #:
     pen_event = None
 
+    #: Number of last set predefined pen attributes
+    pen_num = -1
     #: Undo stack
     undo_stack = []
     #: Position in undo stack. Allows re-do
@@ -222,6 +224,20 @@ class Scribbler(builder.Builder):
             self.disable_scribbling()
         elif command == 'pen':
             self.set_pen(name)
+        elif command == 'BTN_0':
+            # Next pen
+            self.pen_num = self.pen_num % 8 + 1
+            self.set_pen(str(self.pen_num))
+        elif command == 'BTN_7':
+            self.enable_draw()
+        elif command == 'BTN_6':
+            self.enable_erasing()
+        elif command == 'BTN_5':
+            self.enable_box()
+        elif command == 'BTN_4':
+            self.enable_line()
+        elif command == 'BTN_3':
+            self.enable_select_touch()
         else:
             return False
         return True

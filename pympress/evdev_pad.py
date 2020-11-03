@@ -17,6 +17,7 @@ except ModuleNotFoundError:
 class PenEventLoop():
     pressed_buttons = set()
     pen_thread = None
+    buttons_thread = None
     pen_range = None
     collect_coords = {'x': -1, 'y': -1, 'p': -1, 'last': (-1, -1)}
     scribbler = None
@@ -38,6 +39,15 @@ class PenEventLoop():
             if self.pen_thread:
                 self.scribbler = scr
                 self.pen_thread.start()
+        try:
+            buttons_dev = self.find_device(evdev.ecodes.BTN_7)
+        except NameError:
+            return
+        if buttons_dev:
+            self.buttons_thread = threading.Thread(target=self.buttons_event_loop, daemon=True, args=[buttons_dev])
+            if self.buttons_thread:
+                self.scribbler = scr
+                self.buttons_thread.start()
 
     def find_device(self, button):
         for name in evdev.list_devices():
@@ -45,6 +55,16 @@ class PenEventLoop():
             if 1 in dev.capabilities()[0] and button in dev.capabilities()[1]:
                 return dev
         return None
+
+    def buttons_event_loop(self, dev):
+        for event in dev.read_loop():
+            if event.type == evdev.ecodes.EV_KEY:
+                if event.value == evdev.KeyEvent.key_up:
+                    self.pressed_buttons.difference_update({event.code})
+                    name = "BTN_"+str(event.code - evdev.ecodes.BTN_0)
+                    self.scribbler.nav_scribble(name, False, command=name)
+                else:
+                    self.pressed_buttons.add(event.code)
 
     def pen_event_loop(self, dev):
         for event in dev.read_loop():
