@@ -724,8 +724,9 @@ class Document(object):
         if self.highlight_mode == "autopage":
             out_dict['scribbles'] = self.scribbles
         out_dict['page_map'] = self.page_map
-        f = open(self.path + '.pymp', "w")
-        json.dump(out_dict, f, cls=RGBAEncoder)
+        if self.path:
+            f = open(self.path + '.pymp', "w")
+            json.dump(out_dict, f, cls=RGBAEncoder)
 
     def export_pdf(self, filename=None):
         if filename is None:
