@@ -485,6 +485,7 @@ class Scribbler(builder.Builder):
         self.pres_highlight.set_active(self.scribbling_mode)
 
         self.undo_stack = []
+        self.undo_stack_pos = 0
         self.get_object("scribble_redo").set_sensitive(False)
         self.get_object("scribble_undo").set_sensitive(False)
 
@@ -602,7 +603,7 @@ class Scribbler(builder.Builder):
         self.get_object("scribble_undo").set_sensitive(True)
 
     def undo(self, *args):
-        if self.undo_stack_pos > 0:
+        if self.undo_stack_pos > 0 and self.undo_stack:
             self.get_object("scribble_redo").set_sensitive(True)
             self.undo_stack_pos = self.undo_stack_pos - 1
             if self.undo_stack_pos == 0:
