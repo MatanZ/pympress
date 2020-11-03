@@ -354,7 +354,8 @@ class Scribbler(builder.Builder):
 
                 cairo_context.set_source_rgba(*color)
                 cairo_context.set_line_width(width)
-                cairo_context.move_to(*points[0])
+                if points:
+                    cairo_context.move_to(*points[0])
 
                 for p in points[1:]:
                     cairo_context.line_to(*p)
