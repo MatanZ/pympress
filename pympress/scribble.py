@@ -45,14 +45,31 @@ def segments_intersect(A, B, C, D):
     """
     return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
 
+def point_in_rect_ordered(point, rect):
+    """ rect is a pair of coordinates pairs. First pair must be the smaller numbers
+    """
+    return rect[0][0] <= point[0] <= rect[1][0] and rect[0][1] <= point[1] <= rect[1][1]
+
+def add_point_rect_ordered(point, rect):
+    """ Modify rect to include point, if necessary
+    """
+    if point[0] < rect[0][0]:
+        rect[0][0] = point[0]
+    elif point[0] > rect[1][0]:
+        rect[1][0] = point[0]
+    if point[1] < rect[0][1]:
+        rect[0][1] = point[1]
+    elif point[1] > rect[1][1]:
+        rect[1][1] = point[1]
+
 def intersects(last_point, point, scribble):
     """ Returns true if the line intersect the scribble
     """
-    if scribble[0] == 'segment':
-        if last_point:
-            for i in range(len(scribble[3]) - 1):
-                if segments_intersect(point, last_point, scribble[3][i], scribble[3][i + 1]):
-                    return True
+    if scribble[0] == 'segment' and last_point and (point_in_rect_ordered(point, scribble[4])
+        or point_in_rect_ordered(last_point, scribble[4])):
+        for i in range(len(scribble[3]) - 1):
+            if segments_intersect(point, last_point, scribble[3][i], scribble[3][i + 1]):
+                return True
     elif scribble[0] == 'box':
         if min(scribble[3][0][0], scribble[3][1][0]) <= point[0] <= \
            max(scribble[3][0][0], scribble[3][1][0]) and \
@@ -286,6 +303,10 @@ class Scribbler(builder.Builder):
                     (self.scribble_list[-1][3][-1][0] - point[0]) * (self.scribble_list[-1][3][-1][0] - point[0]) + \
                     (self.scribble_list[-1][3][-1][1] - point[1]) * (self.scribble_list[-1][3][-1][1] - point[1]):
                     return True
+                if self.scribble_list[-1][3]:
+                    add_point_rect_ordered(point, self.scribble_list[-1][4])
+                else:
+                    self.scribble_list[-1][4]=[list(point),list(point)]
                 self.scribble_list[-1][3].append(point)
                 self.redraw_current_slide()
                 return True
@@ -300,6 +321,7 @@ class Scribbler(builder.Builder):
                 return True
             elif self.drawing_mode in ("box", "line"):
                 self.scribble_list[-1][3][1] = point
+                add_point_rect_ordered(point, self.scribble_list[-1][4])
                 self.redraw_current_slide()
                 return True
             elif self.drawing_mode == "select_t":
@@ -333,17 +355,17 @@ class Scribbler(builder.Builder):
 
         if e_type == Gdk.EventType.BUTTON_PRESS:
             if self.drawing_mode == "scribble" and button[1] == Gdk.BUTTON_PRIMARY:
-                self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, []])
+                self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [],[]])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode in ("erase", "select_t") or (
                  self.drawing_mode == "scribble" and button[1] == Gdk.BUTTON_SECONDARY):
                 self.last_del_point = None
                 self.stroke_selected = []
             elif self.drawing_mode == "box":
-                self.scribble_list.append(["box", self.scribble_color, self.scribble_width, [point, point]])
+                self.scribble_list.append(["box", self.scribble_color, self.scribble_width, [point, point], []])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "line":
-                self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [point, point]])
+                self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)]])
                 self.add_undo(('a', self.scribble_list[-1]))
             self.scribble_drawing = True
             return self.track_scribble(point, button)
@@ -371,7 +393,7 @@ class Scribbler(builder.Builder):
         else:
             scribbles_to_draw = (s for s in self.scribble_list if s not in self.selected)
 
-        for stype, color, width, points in scribbles_to_draw:
+        for stype, color, width, points, rect in scribbles_to_draw:
 
             if stype == "segment":
                 points = [(p[0] * ww, p[1] * wh) for p in points]
