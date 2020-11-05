@@ -62,18 +62,18 @@ def add_point_rect_ordered(point, rect):
     elif point[1] > rect[1][1]:
         rect[1][1] = point[1]
 
-def intersects(last_point, point, scribble):
-    """ Returns true if the line intersect the scribble
+def intersects(p0, p1, scribble):
+    """ Returns true if the line segment intersect the scribble
     """
-    if scribble[0] == 'segment' and last_point and (point_in_rect_ordered(point, scribble[4])
-        or point_in_rect_ordered(last_point, scribble[4])):
+    if scribble[0] == 'segment' and p0 and (point_in_rect_ordered(p1, scribble[4])
+        or point_in_rect_ordered(p0, scribble[4])):
         for i in range(len(scribble[3]) - 1):
-            if segments_intersect(point, last_point, scribble[3][i], scribble[3][i + 1]):
+            if segments_intersect(p1, p0, scribble[3][i], scribble[3][i + 1]):
                 return True
     elif scribble[0] == 'box':
-        if min(scribble[3][0][0], scribble[3][1][0]) <= point[0] <= \
+        if min(scribble[3][0][0], scribble[3][1][0]) <= p1[0] <= \
            max(scribble[3][0][0], scribble[3][1][0]) and \
-           min(scribble[3][0][1], scribble[3][1][1]) <= point[1] <= \
+           min(scribble[3][0][1], scribble[3][1][1]) <= p1[1] <= \
            max(scribble[3][0][1], scribble[3][1][1]):
             return True
     return False
