@@ -246,6 +246,12 @@ class Scribbler(builder.Builder):
             self.set_pen(name)
         elif command == 'del_selected':
             self.del_selected()
+        elif command == 'select_all':
+            self.select_all()
+        elif command == 'select_none':
+            self.select_none()
+        elif command == 'select_toggle':
+            self.select_toggle()
         elif command == 'BTN_0':
             # Next pen
             self.pen_num = self.pen_num % 8 + 1
@@ -282,6 +288,21 @@ class Scribbler(builder.Builder):
             pen_num = int(name)
         except ValueError:
             pass
+
+    def select_all(self):
+        self.selected = self.scribble_list[:]
+        self.redraw_current_slide()
+
+    def select_none(self):
+        self.selected = []
+        self.redraw_current_slide()
+
+    def select_toggle(self):
+        if self.selected:
+            self.selected = []
+        else:
+            self.selected = self.scribble_list[:]
+        self.redraw_current_slide()
 
     def del_selected(self):
         self.add_undo(('d', self.selected))
@@ -424,7 +445,6 @@ class Scribbler(builder.Builder):
             scribbles_to_draw = (s for s in self.scribble_list if s not in self.selected)
 
         for stype, color, width, points, rect in scribbles_to_draw:
-
             if stype == "segment":
                 points = [(p[0] * ww, p[1] * wh) for p in points]
 
