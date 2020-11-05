@@ -319,7 +319,7 @@ class Scribbler(builder.Builder):
                  self.drawing_mode == "scribble" and self.drag_button == Gdk.BUTTON_SECONDARY):
                 for scribble in self.scribble_list[:]:
                     if intersects(self.last_del_point, point, scribble):
-                        self.add_undo(('d', scribble))
+                        self.add_undo(('d', [scribble]))
                         self.scribble_list.remove(scribble)
                 self.last_del_point = point
                 self.redraw_current_slide()
@@ -703,9 +703,12 @@ class Scribbler(builder.Builder):
                 self.get_object("scribble_undo").set_sensitive(False)
             op = self.undo_stack[self.undo_stack_pos]
             if op[0] == 'a':
-                self.scribble_list.remove(op[1])
+                try:
+                    self.scribble_list.remove(op[1])
+                except ValueError:
+                    pass
             elif op[0] == 'd':
-                self.scribble_list.append(op[1])
+                self.scribble_list.extend(op[1])
             elif op[0] == 'X':
                 self.scribble_list.extend(op[1])
             elif op[0] == 'w':
@@ -723,7 +726,11 @@ class Scribbler(builder.Builder):
             if op[0] == 'a':
                 self.scribble_list.append(op[1])
             elif op[0] == 'd':
-                self.scribble_list.remove(op[1])
+                for i in op[1]:
+                    try:
+                        self.scribble_list.remove(i)
+                    except ValueError:
+                        pass
             elif op[0] == 'X':
                 self.scribble_list = []
                 self.selected = []
