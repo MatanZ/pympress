@@ -244,6 +244,8 @@ class Scribbler(builder.Builder):
             self.disable_scribbling()
         elif command == 'pen':
             self.set_pen(name)
+        elif command == 'del_selected':
+            self.del_selected()
         elif command == 'BTN_0':
             # Next pen
             self.pen_num = self.pen_num % 8 + 1
@@ -280,6 +282,13 @@ class Scribbler(builder.Builder):
             pen_num = int(name)
         except ValueError:
             pass
+
+    def del_selected(self):
+        self.add_undo(('d', self.selected))
+        for scribble in self.selected:
+            self.scribble_list.remove(scribble)
+        self.selected = []
+        self.redraw_current_slide()
 
     def set_pointer(self, point):
         if self.pen_pointer:
