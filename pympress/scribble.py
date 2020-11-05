@@ -161,11 +161,12 @@ class Scribbler(builder.Builder):
     undo_stack_pos = 0
 
     selected = []
+    select_rect = [[],[]]
 
     min_distance = 0
 
     mode_buttons = {"draw": None, "erase": None, "box": None, "line": None,
-                    "select_touch": None,}
+                    "select_touch": None, "select_rect": None,}
 
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
@@ -237,6 +238,8 @@ class Scribbler(builder.Builder):
             self.enable_line()
         elif command == 'select_touch':
             self.enable_select_touch()
+        elif command == 'select_rect':
+            self.enable_select_rect()
         elif command == 'cancel':
             self.disable_scribbling()
         elif command == 'pen':
@@ -255,6 +258,8 @@ class Scribbler(builder.Builder):
             self.enable_line()
         elif command == 'BTN_3':
             self.enable_select_touch()
+        elif command == 'BTN_2':
+            self.enable_select_rect()
         else:
             return False
         return True
@@ -335,6 +340,20 @@ class Scribbler(builder.Builder):
                 self.last_del_point = point
                 self.redraw_current_slide()
                 return True
+            elif self.drawing_mode == "select_r":
+                self.select_rect[1] = list(point)
+                self.selected = []
+                for scribble in self.scribble_list[:]:
+                    #TODO
+                    if scribble[0] == 'segment':
+                        for p in scribble[3]:
+                            if (self.select_rect[1][0] <= p[0] <= self.select_rect[0][0] or
+                                self.select_rect[0][0] <= p[0] <= self.select_rect[1][0]) and (
+                                self.select_rect[1][1] <= p[1] <= self.select_rect[0][1] or
+                                self.select_rect[0][1] <= p[1] <= self.select_rect[1][1]):
+                                self.selected.append(scribble)
+                                break
+                self.redraw_current_slide()
         return False
 
 
@@ -367,6 +386,8 @@ class Scribbler(builder.Builder):
             elif self.drawing_mode == "line":
                 self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)]])
                 self.add_undo(('a', self.scribble_list[-1]))
+            elif self.drawing_mode == "select_r":
+                self.select_rect[0] = list(point)
             self.scribble_drawing = True
             return self.track_scribble(point, button)
 
@@ -422,6 +443,22 @@ class Scribbler(builder.Builder):
                 cairo_context.set_source_rgba(*color)
                 cairo_context.set_line_width(width)
                 cairo_context.stroke()
+
+        if widget is self.scribble_p_da and self.select_rect[1]:
+                points = [(p[0] * ww, p[1] * wh) for p in self.select_rect]
+                cairo_context.move_to(*points[0])
+                x0, y0 = points[0]
+                x1, y1 = points[1]
+                cairo_context.move_to(x0, y0)
+                cairo_context.line_to(x0, y1)
+                cairo_context.line_to(x1, y1)
+                cairo_context.line_to(x1, y0)
+                cairo_context.close_path()
+                cairo_context.set_source_rgba(0.3,0.3,0.3,0.8)
+                cairo_context.set_line_width(2)
+                cairo_context.set_dash([5,5,5])
+                cairo_context.stroke()
+
 
     def update_color(self, widget):
         """ Callback for the color chooser button, to set scribbling color.
@@ -614,25 +651,34 @@ class Scribbler(builder.Builder):
         self.drawing_mode = "erase"
         self.show_button("erase")
         self.selected = []
+        select_rect = [[],[]]
 
     def enable_draw(self, *args):
         self.drawing_mode = "scribble"
         self.show_button("draw")
         self.selected = []
+        select_rect = [[],[]]
 
     def enable_box(self, *args):
         self.drawing_mode = "box"
         self.show_button("box")
         self.selected = []
+        select_rect = [[],[]]
 
     def enable_line(self, *args):
         self.drawing_mode = "line"
         self.show_button("line")
         self.selected = []
+        select_rect = [[],[]]
 
     def enable_select_touch(self, *args):
         self.drawing_mode = "select_t"
         self.show_button("select_touch")
+        select_rect = [[],[]]
+
+    def enable_select_rect(self, *args):
+        self.drawing_mode = "select_r"
+        self.show_button("select_rect")
 
     def add_undo(self, operation, update=False):
         if self.undo_stack_pos < len(self.undo_stack):

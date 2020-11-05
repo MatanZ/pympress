@@ -308,6 +308,24 @@
               </packing>
             </child>
             <child>
+              <object class="GtkButton" id="scribble_select_rect">
+                <property name="label">Select R</property>
+                <property name="width_request">80</property>
+                <property name="height_request">80</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="always_show_image">True</property>
+                <property name="use_stock">True</property>
+                <signal name="clicked" handler="enable_select_rect" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">5</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkButton" id="zoom_stop_button1">
                 <property name="label">gtk-zoom-out</property>
                 <property name="width_request">80</property>
