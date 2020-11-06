@@ -680,30 +680,30 @@ class Scribbler(builder.Builder):
         self.drawing_mode = "erase"
         self.show_button("erase")
         self.selected = []
-        select_rect = [[],[]]
+        self.select_rect = [[],[]]
 
     def enable_draw(self, *args):
         self.drawing_mode = "scribble"
         self.show_button("draw")
         self.selected = []
-        select_rect = [[],[]]
+        self.select_rect = [[],[]]
 
     def enable_box(self, *args):
         self.drawing_mode = "box"
         self.show_button("box")
         self.selected = []
-        select_rect = [[],[]]
+        self.select_rect = [[],[]]
 
     def enable_line(self, *args):
         self.drawing_mode = "line"
         self.show_button("line")
         self.selected = []
-        select_rect = [[],[]]
+        self.select_rect = [[],[]]
 
     def enable_select_touch(self, *args):
         self.drawing_mode = "select_t"
         self.show_button("select_touch")
-        select_rect = [[],[]]
+        self.select_rect = [[],[]]
 
     def enable_select_rect(self, *args):
         self.drawing_mode = "select_r"
