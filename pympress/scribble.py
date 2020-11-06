@@ -78,6 +78,17 @@ def intersects(p0, p1, scribble):
             return True
     return False
 
+def adjust_points(pts_l, dx, dy):
+    for p in pts_l:
+        p[0] = p[0] + dx
+        p[1] = p[1] + dy
+
+def adjust_scribbles(scribbles, dx, dy):
+    for s in scribbles:
+        adjust_points(s[3], dx, dy)
+        if s[0] in ("segment"):
+            adjust_points(s[4], dx, dy)
+
 class Scribbler(builder.Builder):
     """ UI that allows to draw free-hand on top of the current slide.
 
@@ -166,7 +177,7 @@ class Scribbler(builder.Builder):
     min_distance = 0
 
     mode_buttons = {"draw": None, "erase": None, "box": None, "line": None,
-                    "select_touch": None, "select_rect": None,}
+                    "select_touch": None, "select_rect": None, "move": None,}
 
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
@@ -384,6 +395,18 @@ class Scribbler(builder.Builder):
                                 self.selected.append(scribble)
                                 break
                 self.redraw_current_slide()
+            elif self.drawing_mode == "move":
+                dx = point[0] - self.last_del_point[0]
+                dy = point[1] - self.last_del_point[1]
+                if dx == dy == 0:
+                    return True
+                self.last_del_point = point
+                self.undo_stack[-1][2] = point[0] - self.move_from[0]
+                self.undo_stack[-1][3] = point[1] - self.move_from[1]
+                adjust_scribbles(self.selected, dx, dy)
+                adjust_points(self.select_rect, dx, dy)
+                self.redraw_current_slide()
+
         return False
 
 
@@ -418,6 +441,10 @@ class Scribbler(builder.Builder):
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "select_r":
                 self.select_rect[0] = list(point)
+            elif self.drawing_mode == "move":
+                self.move_from = point
+                self.last_del_point = point
+                self.add_undo(['m', self.selected[:], 0, 0])
             self.scribble_drawing = True
             return self.track_scribble(point, button)
 
@@ -709,6 +736,16 @@ class Scribbler(builder.Builder):
         self.drawing_mode = "select_r"
         self.show_button("select_rect")
 
+    def enable_move(self, *args):
+        if self.selected:
+            self.drawing_mode = "move"
+            self.show_button("move")
+            self.select_rect = [self.selected[0][3][0][:],self.selected[0][3][0][:]]
+            for i in self.selected:
+                pts = i[4] if i[0] == "segment" else i[3]
+                for p in pts:
+                    add_point_rect_ordered(p, self.select_rect)
+
     def add_undo(self, operation, update=False):
         if self.undo_stack_pos < len(self.undo_stack):
             del self.undo_stack[self.undo_stack_pos:]
@@ -746,6 +783,8 @@ class Scribbler(builder.Builder):
             elif op[0] == 'c':
                 for s, oc, nc in op[1]:
                     s[1] = oc
+            elif op[0] == 'm':
+                adjust_scribbles(op[1], -op[2], -op[3])
 
             self.redraw_current_slide()
 
@@ -769,6 +808,8 @@ class Scribbler(builder.Builder):
             elif op[0] == 'c':
                 for s, oc, nc in op[1]:
                     s[1] = nc
+            elif op[0] == 'm':
+                adjust_scribbles(op[1], op[2], op[3])
             self.undo_stack_pos = self.undo_stack_pos + 1
             if self.undo_stack_pos == len(self.undo_stack):
                 self.get_object("scribble_redo").set_sensitive(False)
