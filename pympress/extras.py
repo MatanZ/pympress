@@ -730,7 +730,7 @@ except ImportError:
         stop_daemon = nop
 
 else:
-    logger.warning(_('Building FileWatcher'))
+    logger.debug(_('Building FileWatcher'))
     class FileWatcher(object):
         """ A class with only static methods that wraps object watchdogs, to trigger callbacks when a file changes.
         """
