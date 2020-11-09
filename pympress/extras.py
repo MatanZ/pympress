@@ -498,7 +498,7 @@ class Zoom(object):
     shift = (0, 0)
 
     #: a callback for the :func:`~Gtk.Button.set_sensitive` function of the zoom-out button in the scribble interface
-    set_scribble_zoomout_sensitive = lambda: None
+    set_scribble_zoomout_sensitive = lambda x,y: None
     #: :class:`~Gtk.MenuItem` that is clicked to stop zooming
     menu_zoom_out = None
     #: :class:`~Gtk.Box` in the Presenter window, used to reliably set cursors.
@@ -525,7 +525,8 @@ class Zoom(object):
         Args:
             scribble_builder (builder.Builder): The builder from which to load widgets for scribble
         """
-        self.set_scribble_zoomout_sensitive = scribble_builder.get_callback_handler('zoom_stop_button.set_sensitive')
+        #self.set_scribble_zoomout_sensitive = scribble_builder.get_callback_handler('zoom_stop_button.set_sensitive')
+        self.set_scribble_zoomout_sensitive = scribble_builder.buttons["unzoom"].set_sensitive
 
 
     def start_zooming(self, *args):

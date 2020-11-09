@@ -47,8 +47,6 @@ from gi.repository import GObject, Gtk, Gdk, GLib, GdkPixbuf
 
 from pympress import document, surfacecache, util, pointer, scribble, config, builder, talk_time, extras, editable_label
 
-
-
 class UI(builder.Builder):
     """ Pympress GUI management.
     """
@@ -179,6 +177,7 @@ class UI(builder.Builder):
     draw_selected = True
     selected_timeout = None
 
+    p_central = None
 
     ##############################################################################
     #############################      UI setup      #############################
@@ -216,15 +215,10 @@ class UI(builder.Builder):
         self.talk_time = talk_time.TimeCounter(self, self.est_time)
         self.timing = extras.TimingReport(self)
 
-        # solve circular creation-time dependency
-        self.est_time.delayed_callback_connection(self)
-        self.zoom.delayed_callback_connection(self.scribbler)
-
         # Get placeable widgets. NB, get the highlight one manually from the scribbler class
         self.placeable_widgets = {
             name: self.get_object(widget_name) for name, widget_name in self.config.placeable_widgets.items()
         }
-        self.placeable_widgets['highlight'] = self.scribbler.scribble_overlay
 
         # Initialize windows and screens
         self.setup_screens()
@@ -250,6 +244,10 @@ class UI(builder.Builder):
         self.redraw_panes()
         self.on_page_change(False)
 
+        # solve circular creation-time dependency
+        self.est_time.delayed_callback_connection(self)
+        self.zoom.delayed_callback_connection(self.scribbler)
+
         # Adjust default visibility of items
         self.prev_button.set_visible(self.show_bigbuttons)
         self.next_button.set_visible(self.show_bigbuttons)
@@ -260,6 +258,8 @@ class UI(builder.Builder):
         self.pen_pointer_pix = GdkPixbuf.Pixbuf.new_from_file(util.get_icon_path('pointer_green' + '.png'))
         self.hlines = self.config.getfloat('presenter', 'horizontal_lines')
         self.vlines = self.config.getfloat('presenter', 'vertical_lines')
+
+        self.scribbler.laser = self.laser
 
 
     def load_icons(self):
@@ -304,7 +304,6 @@ class UI(builder.Builder):
             'pres_blank':            self.blanked,
             'pres_annot':            self.show_annotations,
             'pres_buttons':          self.show_bigbuttons,
-            'pres_highlight':        False,
 
             'start_blanked':         self.config.getboolean('content', 'start_blanked'),
             'start_cwin_fullscreen': self.config.getboolean('content', 'start_fullscreen'),
@@ -323,11 +322,10 @@ class UI(builder.Builder):
 
         slide_type = self.notes_mode.complement()
         self.cache.add_widget(self.p_da_cur, slide_type)
+        #self.cache.add_widget(self.scribbler.scribble_p_da, slide_type, prerender_enabled = False)
         self.cache.add_widget(self.p_da_cur, slide_type, zoomed = True)
         self.cache.add_widget(self.p_da_next, slide_type)
         self.cache.add_widget(self.p_da_notes, self.notes_mode, prerender_enabled = bool(self.notes_mode))
-        self.cache.add_widget(self.scribbler.scribble_p_da, slide_type, prerender_enabled = False)
-        self.cache.add_widget(self.scribbler.scribble_p_da, slide_type, zoomed = True)
 
         # set default value
         self.page_number.set_last(self.doc.pages_number())
@@ -339,6 +337,93 @@ class UI(builder.Builder):
         colourclass = 'white' if self.config.getboolean('content', 'white_blanking') else 'black'
         self.c_da.get_style_context().add_class(colourclass)
         self.c_win.get_style_context().add_class(colourclass)
+
+        icons = util.list_toolbar_icons()
+
+        buttons = [
+            ("export_xopp", "document-save", "Export"),
+            ("export_pdf", "document-save-as", "Export PDF"),
+            ("", "", ""),
+            ("unzoom", "zoom-fit-best", "No zoom"),
+            ("zoom", "zoom-in", "Zoom in"),
+            ("", "", ""),
+            ("undo", "edit-undo", "Undo"),
+            ("redo", "edit-redo", "Redo"),
+            ("clear_all", "edit-clear-all", "Clear"),
+            ("", "", ""),
+            ("cancel", "process-stop", "Disable scribbling"),
+            ("draw", "toolbar-pen", "Draw freehand"),
+            ("select_t", "toolbar-select", "Select freehand"),
+            ("select_r", "toolbar-select_r", "Select rectangle"),
+            ("erase", "toolbar-erase", "Erase"),
+            ("line", "toolbar-line", "Draw line"),
+            ("box", "toolbar-rect", "Draw rectangle"),
+            ("", "", ""),
+        ]
+
+        toolbar = Gtk.Toolbar()
+        toolbar.set_name("toolbar")
+        toolbar.set_style(Gtk.ToolbarStyle.ICONS)
+        toolbar.set_orientation(Gtk.Orientation.VERTICAL)
+        toolbar.set_icon_size(Gtk.IconSize.DND)
+
+        self.scribbler.buttons = {}
+        for name, icon, label in buttons:
+            if name == "":
+                toolbar.insert(Gtk.SeparatorToolItem.new(), 999)
+            else:
+                if icon in icons:
+                    image = Gtk.Image.new_from_file(icons[icon])
+                else:
+                    image = Gtk.Image.new_from_icon_name(icon, 96)
+                button = Gtk.ToolButton.new(image, None)
+                button.set_name(name)
+                button.set_label(label)
+                button.set_tooltip_text(label)
+                button.connect("clicked", self.toolbar_click)
+                button.connect("button-press-event", self.on_navigation)
+                toolbar.insert(button, 999)
+                self.scribbler.buttons[name] = button
+
+        width_scale = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, 0.1, 30, 0.1)
+        width_scale.set_name("scribble_width")
+        width_scale.set_digits(1)
+        width_scale.set_draw_value(True)
+        width_scale.set_has_origin(True)
+        width_scale.set_value_pos(Gtk.PositionType.RIGHT)
+        width_scale.set_size_request(32,96)
+        width_scale.connect("change-value", self.scribbler.update_width)
+        toolbar_width_scale = Gtk.ToolItem.new()
+        toolbar_width_scale.add(width_scale)
+        toolbar.insert(toolbar_width_scale, 999)
+        self.scribbler.buttons["scribble_width"] = width_scale
+
+        alpha_scale = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, 0, 1, 0.1)
+        alpha_scale.set_name("scribble_alpha")
+        alpha_scale.set_digits(2)
+        alpha_scale.set_draw_value(True)
+        alpha_scale.set_has_origin(True)
+        alpha_scale.set_value_pos(Gtk.PositionType.RIGHT)
+        alpha_scale.set_size_request(32,96)
+        alpha_scale.connect("change-value", self.scribbler.update_alpha)
+        toolbar_alpha_scale = Gtk.ToolItem.new()
+        toolbar_alpha_scale.add(alpha_scale)
+        toolbar.insert(toolbar_alpha_scale, 999)
+        self.scribbler.buttons["scribble_alpha"] = alpha_scale
+
+        color_button = Gtk.ColorButton.new_with_rgba(self.scribbler.scribble_color)
+        color_button.connect("color-set", self.scribbler.update_color)
+        color_button.set_size_request(48,48)
+        toolbar_color_button = Gtk.ToolItem.new()
+        toolbar_color_button.add(color_button)
+        toolbar.insert(toolbar_color_button, 999)
+        self.scribbler.buttons["color_button"] = color_button
+
+        alpha_scale.set_value(self.scribbler.scribble_color.alpha)
+        width_scale.set_value(self.scribbler.scribble_width)
+
+        self.p_central.pack_start(toolbar, False, False, 1)
+        self.p_central.reorder_child(toolbar, 0)
 
 
     def setup_screens(self):
@@ -449,7 +534,6 @@ class UI(builder.Builder):
             self.config.set('presenter', 'monitor', str(p_monitor))
             cw = self.p_central.get_allocated_width()
             ch = self.p_central.get_allocated_height()
-            self.scribbler.off_render.set_size_request(cw, ch)
 
         elif widget is self.c_win:
             c_monitor = self.c_win.get_screen().get_monitor_at_window(self.c_frame.get_parent_window())
@@ -458,7 +542,7 @@ class UI(builder.Builder):
 
     def redraw_selected(self):
         self.draw_selected = not self.draw_selected
-        self.scribbler.scribble_p_da.queue_draw()
+        self.p_da_cur.queue_draw()
         return True
 
     def redraw_panes(self):
@@ -519,7 +603,7 @@ class UI(builder.Builder):
         self.doc.cleanup_media_files()
 
         self.config.update_layout('notes' if self.notes_mode else 'plain',
-                                  self.p_central.get_children()[0], self.pane_handle_pos)
+                                  self.p_central.get_children()[1], self.pane_handle_pos)
 
         if bool(self.c_win.get_window().get_state() & Gdk.WindowState.FULLSCREEN):
             util.set_screensaver(False, self.c_win.get_window())
@@ -722,10 +806,8 @@ class UI(builder.Builder):
         # Clear all widget caches
         self.cache.clear_cache(self.c_da.get_name())
         self.cache.clear_cache(self.p_da_cur.get_name())
-        self.cache.clear_cache(self.scribbler.scribble_p_da.get_name())
         self.cache.clear_cache(self.c_da.get_name() + '_zoomed')
         self.cache.clear_cache(self.p_da_cur.get_name() + '_zoomed')
-        self.cache.clear_cache(self.scribbler.scribble_p_da.get_name() + '_zoomed')
 
         # Page numbers might not match now
         self.page_number.enable_labels(self.doc.has_labels())
@@ -815,9 +897,6 @@ class UI(builder.Builder):
         self.p_frame_cur.set_property('ratio', pr)
         self.p_da_cur.queue_draw()
 
-        self.scribbler.scribble_p_frame.set_property('ratio', pr)
-        self.scribbler.scribble_p_frame.queue_draw()
-
         if page_next is not None:
             pr = page_next.get_aspect_ratio(page_type)
             self.p_frame_next.set_property('ratio', pr)
@@ -832,7 +911,7 @@ class UI(builder.Builder):
         if self.highlight_mode in ('autopage', 'page') and len(self.doc.history) > 1:
             self.doc.scribbles[self.doc.history[-2]] = self.scribbler.scribble_list[:]
         if self.highlight_mode in ('autopage', 'clear', 'page') and not keep_scribbles:
-            self.scribbler.clear_scribble()
+            self.scribbler.clear_scribble(page=True)
         if self.highlight_mode in ('autopage', 'page'):
             try:
                 if self.doc and self.page_preview_nb in self.doc.scribbles:
@@ -875,7 +954,7 @@ class UI(builder.Builder):
                 return
             page = self.doc.page(self.doc.cur_page)
             nb = self.doc.cur_page
-        elif widget is self.p_da_notes or widget is self.p_da_cur or widget is self.scribbler.scribble_p_da:
+        elif widget is self.p_da_notes or widget is self.p_da_cur:
             # Current page 'preview'
             page = self.doc.page(self.page_preview_nb)
             nb = self.page_preview_nb
@@ -893,8 +972,7 @@ class UI(builder.Builder):
         wtype = self.cache.get_widget_type(name)
         ww, wh = widget.get_allocated_width(), widget.get_allocated_height()
 
-        if self.zoom.scale != 1. and (widget is self.p_da_cur or widget is self.c_da or
-                                      widget is self.scribbler.scribble_p_da):
+        if self.zoom.scale != 1. and (widget is self.p_da_cur or widget is self.c_da):
             zoom_matrix = self.zoom.get_matrix(ww, wh)
             name += '_zoomed'
         else:
@@ -922,14 +1000,14 @@ class UI(builder.Builder):
             cairo_context.set_source_surface(pb, 0, 0)
             cairo_context.paint()
 
-        if widget is self.c_da or widget is self.p_da_cur or widget is self.scribbler.scribble_p_da:
+        if widget is self.c_da or widget is self.p_da_cur:
             cairo_context.save()
             cairo_context.transform(zoom_matrix)
 
-            if self.show_highlights or (self.scribbler.scribbling_mode and widget is self.scribbler.scribble_p_da):
+            if self.show_highlights or (self.scribbler.scribbling_mode and widget is self.p_da_cur):
                 self.scribbler.draw_scribble(widget, cairo_context,
-                                             self.draw_selected or widget is not self.scribbler.scribble_p_da)
-                if widget is self.scribbler.scribble_p_da and self.scribbler.selected and \
+                                             self.draw_selected or widget is not self.p_da_cur)
+                if widget is self.p_da_cur and self.scribbler.selected and \
                     not self.selected_timeout:
                     self.selected_timeout = GLib.timeout_add(500, self.redraw_selected)
 
@@ -937,7 +1015,7 @@ class UI(builder.Builder):
 
             cairo_context.restore()
 
-        if widget is self.c_da or widget is self.p_da_cur or widget is self.scribbler.scribble_p_da:
+        if widget is self.c_da or widget is self.p_da_cur:
             # do not use the zoom matrix for the pointer, it is relative to the screen not the slide
             self.laser.render_pointer(cairo_context, ww, wh)
 
@@ -947,7 +1025,7 @@ class UI(builder.Builder):
                 Gdk.cairo_set_source_pixbuf(cairo_context, self.pen_pointer_pix, x, y)
                 cairo_context.paint()
 
-        if widget is self.scribbler.scribble_p_da:
+        if widget is self.p_da_cur:
             if self.vlines > 1:
                 for i in range(1, int(self.vlines) + 1):
                     cairo_context.set_source_rgba(0.5, 0.5, 0.5, 0.5)
@@ -969,7 +1047,6 @@ class UI(builder.Builder):
         """
         self.cache.clear_cache(self.c_da.get_name() + '_zoomed')
         self.cache.clear_cache(self.p_da_cur.get_name() + '_zoomed')
-        self.cache.clear_cache(self.scribbler.scribble_p_da.get_name() + '_zoomed')
 
 
     def redraw_current_slide(self):
@@ -977,14 +1054,13 @@ class UI(builder.Builder):
         """
         self.c_da.queue_draw()
         self.p_da_cur.queue_draw()
-        self.scribbler.scribble_p_da.queue_draw()
 
 
     ##############################################################################
     ############################     User inputs      ############################
     ##############################################################################
 
-    def on_navigation(self, widget, event):
+    def on_navigation(self, widget, event, command=None):
         """ Manage key presses for both windows.
 
         Args:
@@ -994,15 +1070,21 @@ class UI(builder.Builder):
         Returns:
             `bool`: whether the event was consumed
         """
-        if event.type != Gdk.EventType.KEY_PRESS:
-            return
+        if not command:
+            if event.type != Gdk.EventType.KEY_PRESS:
+                return
 
-        name = Gdk.keyval_name(event.keyval)
-        ctrl_pressed = event.get_state() & Gdk.ModifierType.CONTROL_MASK
-        shift_pressed = event.get_state() & Gdk.ModifierType.SHIFT_MASK
-        meta_pressed = event.get_state() & Gdk.ModifierType.MOD1_MASK
+            name = Gdk.keyval_name(event.keyval)
+            ctrl_pressed = event.get_state() & Gdk.ModifierType.CONTROL_MASK
+            shift_pressed = event.get_state() & Gdk.ModifierType.SHIFT_MASK
+            meta_pressed = event.get_state() & Gdk.ModifierType.MOD1_MASK
 
-        command = self.config.shortcuts.get((event.keyval, ctrl_pressed | shift_pressed | meta_pressed), None)
+            command = self.config.shortcuts.get((event.keyval, ctrl_pressed | shift_pressed | meta_pressed), None)
+        else:
+            name = command
+            ctrl_pressed = False
+            shift_pressed = False
+            meta_pressed = False
 
         # Try passing events to special-behaviour widgets (spinner, ett, zooming, scribbler) in case they are enabled
         if self.page_number.on_keypress(widget, event, name, command):
@@ -1097,6 +1179,9 @@ class UI(builder.Builder):
 
         return True
 
+    def toolbar_click(self, widget):
+        self.on_navigation(widget, None, command=widget.get_name())
+        pass
 
     def on_scroll(self, widget, event):
         """ Manage scroll events.
@@ -1410,7 +1495,7 @@ class UI(builder.Builder):
         if old is None: old = 'notes' if self.notes_mode else 'plain'
         if new is None: new = 'notes' if self.notes_mode else 'plain'
 
-        self.config.update_layout(old, self.p_central.get_children()[0], self.pane_handle_pos)
+        self.config.update_layout(old, self.p_central.get_children()[1], self.pane_handle_pos)
         pane_handles = self.replace_layout(self.config.get_layout(new), self.p_central,
                                            self.placeable_widgets, self.on_pane_event)
         self.pane_handle_pos.update(pane_handles)
@@ -1485,7 +1570,6 @@ class UI(builder.Builder):
         self.cache.set_widget_type('p_da_next', page_type)
         self.cache.set_widget_type('p_da_cur', page_type)
         self.cache.set_widget_type('p_da_cur_zoomed', page_type)
-        self.cache.set_widget_type('scribble_p_da', page_type)
         self.cache.set_widget_type('p_da_notes', self.notes_mode)
 
         if self.notes_mode:

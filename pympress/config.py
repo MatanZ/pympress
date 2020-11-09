@@ -315,6 +315,9 @@ class Config(configparser.ConfigParser, object):  # python 2 fix
         if matching_widget_names:
             return matching_widget_names[0]
 
+        elif issubclass(type(widget), Gtk.Toolbar):
+            return {}
+
         elif issubclass(type(widget), Gtk.Box):
             return {'resizeable': False, 'orientation': orientation_names[widget.get_orientation()],
                     'children': [self.widget_layout_to_tree(c, pane_handle_pos) for c in widget.get_children()]}

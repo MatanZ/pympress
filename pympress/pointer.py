@@ -209,7 +209,7 @@ class Pointer(object):
             cairo_context.paint()
 
 
-    def track_pointer(self, widget, event):
+    def track_pointer(self, widget, event, point=None):
         """ Move the laser pointer at the mouse location.
 
         Args:
@@ -221,8 +221,11 @@ class Pointer(object):
         """
         if self.show_pointer:
             ww, wh = widget.get_allocated_width(), widget.get_allocated_height()
-            ex, ey = event.get_coords()
-            self.pointer_pos = (ex / ww, ey / wh)
+            if point:
+                self.pointer_pos = point
+            else:
+                ex, ey = event.get_coords()
+                self.pointer_pos = (ex / ww, ey / wh)
             self.redraw_current_slide()
             return True
 

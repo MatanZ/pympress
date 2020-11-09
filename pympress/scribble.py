@@ -97,8 +97,6 @@ class Scribbler(builder.Builder):
         builder (:class:`~pympress.builder.Builder`): A builder from which to load widgets
         notes_mode (`bool`): The current notes mode, i.e. whether we display the notes on second slide
     """
-    #: Whether we are displaying the interface to scribble on screen and the overlays containing said scribbles
-    scribbling_mode = False
     #: `list` of scribbles to be drawn, as tuples of color :class:`~Gdk.RGBA`, width `int`, and a `list` of points.
     scribble_list = []
     #: Whether the current mouse movements are drawing strokes or should be ignored
@@ -108,24 +106,15 @@ class Scribbler(builder.Builder):
     #: `int` current stroke width of the scribbling tool
     scribble_width = 1
 
-    #: :class:`~Gtk.HBox` that replaces normal panes when scribbling is on, contains buttons and scribble drawing area.
-    scribble_overlay = None
-    #: :class:`~Gtk.DrawingArea` for the scribbles in the Presenter window. Actually redraws the slide.
-    scribble_p_da = None
     #: :class:`~Gtk.EventBox` for the scribbling in the Content window, captures freehand drawing
     scribble_c_eb = None
     #: :class:`~Gtk.EventBox` for the scribbling in the Presenter window, captures freehand drawing
     scribble_p_eb = None
-    #: :class:`~Gtk.AspectFrame` for the slide in the Presenter's highlight mode
-    scribble_p_frame = None
 
-    #: A :class:`~Gtk.OffscreenWindow` where we render the scribbling interface when it's not shown
-    off_render = None
     #: :class:`~Gtk.Box` in the Presenter window, where we insert scribbling.
     p_central = None
+    p_da_cur = None
 
-    #: :class:`~Gtk.CheckMenuItem` that shows whether the scribbling is toggled
-    pres_highlight = None
     #: :class:`~Gtk.Button` that is clicked to stop zooming, unsensitive when there is no zooming
     zoom_stop_button = None
 
@@ -138,8 +127,6 @@ class Scribbler(builder.Builder):
     #: callback, to be connected to :func:`~pympress.ui.UI.track_clicks`
     track_clicks = lambda: None
 
-    #: callback, to be connected to :func:`~pympress.ui.UI.swap_layout`
-    swap_layout = lambda: None
     #: callback, to be connected to :func:`~pympress.ui.UI.redraw_current_slide`
     redraw_current_slide = lambda: None
 
@@ -154,10 +141,8 @@ class Scribbler(builder.Builder):
     drag_button = 0
     #: previous point in right button drag event
     last_del_point = None
-    #: Indicates that dragging the cursor erases instead of draws. Requires scribbling_mode
+    #: Indicates drawing mode: "draw", "erase", "box", "line", "select_t", "select_r", "move"
     drawing_mode = None
-    #: Save scribbling mode when enabling it for erasing mode, to restore when leaving ersing mode
-    before_erasing = None
 
     #: position of the pen (writing pad) pointer (from UI class)
     pen_pointer = None
@@ -176,19 +161,16 @@ class Scribbler(builder.Builder):
 
     min_distance = 0
 
-    mode_buttons = {"draw": None, "erase": None, "box": None, "line": None,
-                    "select_touch": None, "select_rect": None, "move": None,}
+    laser = None
 
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
 
-        self.load_ui('highlight')
         builder.load_widgets(self)
 
         self.on_draw = builder.get_callback_handler('on_draw')
         self.track_motions = builder.get_callback_handler('track_motions')
         self.track_clicks = builder.get_callback_handler('track_clicks')
-        self.swap_layout = builder.get_callback_handler('swap_layout')
         self.redraw_current_slide = builder.get_callback_handler('redraw_current_slide')
         self.resize_cache = builder.get_callback_handler('cache.resize_widget')
         self.get_slide_point = builder.get_callback_handler('zoom.get_slide_point')
@@ -202,13 +184,6 @@ class Scribbler(builder.Builder):
         self.scribble_width = config.getfloat('scribble', 'width')
 
         self.config = config
-
-        # Presenter-size setup
-        self.get_object("scribble_color").set_rgba(self.scribble_color)
-        self.get_object("scribble_width").set_value(self.scribble_width)
-
-        for b in self.mode_buttons:
-            self.mode_buttons[b] = self.get_object("scribble_" + b)
 
         self.pen_event = evdev_pad.PenEventLoop(self)
         if self.pen_event.pen_thread:
@@ -229,12 +204,12 @@ class Scribbler(builder.Builder):
         Returns:
             `bool`: whether the event was consumed
         """
-        if not self.scribbling_mode:
-            return False
-        elif command == 'undo_scribble':
+        if command == 'undo':
             self.undo()
         elif command == 'redo':
             self.redo()
+        elif command == 'clear_all':
+            self.clear_scribble()
         elif command == 'scribble':
             self.enable_scribbling()
         elif command == 'toggle_erase':
@@ -242,14 +217,14 @@ class Scribbler(builder.Builder):
         elif command == 'draw':
             self.enable_draw()
         elif command == 'erase':
-            self.enable_erasing()
+            self.enable_erase()
         elif command == 'box':
             self.enable_box()
         elif command == 'line':
             self.enable_line()
-        elif command == 'select_touch':
+        elif command == 'select_t':
             self.enable_select_touch()
-        elif command == 'select_rect':
+        elif command == 'select_r':
             self.enable_select_rect()
         elif command == 'cancel':
             self.disable_scribbling()
@@ -270,7 +245,7 @@ class Scribbler(builder.Builder):
         elif command == 'BTN_7':
             self.enable_draw()
         elif command == 'BTN_6':
-            self.enable_erasing()
+            self.enable_erase()
         elif command == 'BTN_5':
             self.enable_box()
         elif command == 'BTN_4':
@@ -293,8 +268,8 @@ class Scribbler(builder.Builder):
         self.scribble_color = Gdk.RGBA()
         if p[0].strip():
             self.scribble_color.parse(p[0])
-        self.get_object("scribble_color").set_rgba(self.scribble_color)
-        self.get_object("scribble_width").set_value(self.scribble_width)
+        self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
+        self.buttons["scribble_width"].set_value(self.scribble_width)
         try:
             pen_num = int(name)
         except ValueError:
@@ -339,6 +314,7 @@ class Scribbler(builder.Builder):
             `bool`: whether the event was consumed
         """
         if self.scribble_drawing:
+            self.laser.track_pointer(self.p_da_cur, None, point=point)
             if self.pen_pointer is not None:
                 self.pen_pointer[0] = point
             if button[0]:
@@ -422,7 +398,7 @@ class Scribbler(builder.Builder):
         Returns:
             `bool`: whether the event was consumed
         """
-        if not always and not self.scribbling_mode:
+        if not always and not self.drawing_mode:
             return False
 
         if e_type == Gdk.EventType.BUTTON_PRESS:
@@ -434,7 +410,7 @@ class Scribbler(builder.Builder):
                 self.last_del_point = None
                 self.stroke_selected = []
             elif self.drawing_mode == "box":
-                self.scribble_list.append(["box", self.scribble_color, self.scribble_width, [point, point], []])
+                self.scribble_list.append(["box", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)]])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "line":
                 self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)]])
@@ -500,7 +476,7 @@ class Scribbler(builder.Builder):
                 cairo_context.set_line_width(width)
                 cairo_context.stroke()
 
-        if widget is self.scribble_p_da and self.select_rect[1]:
+        if widget is self.p_da_cur and self.select_rect[1]:
                 points = [(p[0] * ww, p[1] * wh) for p in self.select_rect]
                 cairo_context.move_to(*points[0])
                 x0, y0 = points[0]
@@ -529,8 +505,28 @@ class Scribbler(builder.Builder):
                 s[1] = color
         else:
             self.scribble_color = color
+            self.buttons["scribble_alpha"] = self.scribble_color.alpha
             self.config.set('scribble', 'color', self.scribble_color.to_string())
 
+    def update_alpha(self, widget, event, value):
+        """ Callback for the alpha slider
+
+        Args:
+            widget (:class:`~Gtk.Scale`): The slider control used to select alpha channel value
+            event (:class:`~Gdk.Event`):  the GTK event triggering this update.
+            value (`int`): the width of the scribbles to be drawn
+        """
+        # It seems that values returned are not necessarily in range
+        alpha = min(max(0, int(value * 100) / 100), 1)
+        rgba = Gdk.RGBA(self.scribble_color.red, self.scribble_color.green, self.scribble_color.blue, alpha)
+        if self.selected:
+            self.add_undo(('p', [[s, s[1].alpha, alpha] for s in self.selected]), True)
+            for s in self.selected:
+                s[1] = Gdk.RGBA(s[1].red, s[1].green, s[1].blue, alpha)
+        else:
+            self.scribble_color = rgba
+            self.buttons["color_button"].set_rgba(rgba)
+            self.config.set('scribble', 'rgba', self.scribble_color.to_string())
 
     def update_width(self, widget, event, value):
         """ Callback for the width chooser slider, to set scribbling width.
@@ -541,7 +537,7 @@ class Scribbler(builder.Builder):
             value (`int`): the width of the scribbles to be drawn
         """
         # It seems that values returned are not necessarily in range
-        width = max(0.1, int(value * 10) / 10)
+        width = min(max(0.1, int(value * 10) / 10), 30)
         if self.selected:
             self.add_undo(('w', [[s, s[2], width] for s in self.selected]), True)
             for s in self.selected:
@@ -551,11 +547,17 @@ class Scribbler(builder.Builder):
             self.config.set('scribble', 'width', str(self.scribble_width))
 
 
-    def clear_scribble(self, *args):
+    def clear_scribble(self, *args, **kwargs):
         """ Callback for the scribble clear button, to remove all scribbles.
         """
-        if self.scribbling_mode:
+        if 'page' in kwargs:
+            self.undo_stack = []
+            self.undo_stack_pos = 0
+            self.buttons["undo"].set_sensitive(False)
+            self.buttons["redo"].set_sensitive(False)
+        else:
             self.add_undo(('X', self.scribble_list[:]))
+
         del self.scribble_list[:]
         self.selected = []
 
@@ -576,35 +578,6 @@ class Scribbler(builder.Builder):
         self.resize_cache(widget.get_name(), event.width, event.height)
 
 
-    def switch_scribbling(self, widget, event = None):
-        """ Starts the mode where one can read on top of the screen.
-
-        Args:
-            widget (:class:`~Gtk.Widget`):  the widget which has received the event.
-            event (:class:`~Gdk.Event` or None):  the GTK event., None when called through a menu item
-
-        Returns:
-            `bool`: whether the event was consumed
-        """
-        if issubclass(type(widget), Gtk.CheckMenuItem) and widget.get_active() == self.scribbling_mode:
-            # Checking the checkbox conforming to current situation: do nothing
-            return False
-
-        elif issubclass(type(widget), Gtk.Actionable):
-            # A button or menu item, etc. directly connected to this action
-            pass
-
-        elif event.type != Gdk.EventType.KEY_PRESS:
-            return False
-
-        # Perform the state toggle
-        if self.scribbling_mode:
-            return self.disable_scribbling()
-
-        else:
-            return self.enable_scribbling()
-
-
     def enable_scribbling(self):
         """ Enable the scribbling mode.
 
@@ -612,22 +585,6 @@ class Scribbler(builder.Builder):
             `bool`: whether it was possible to enable (thus if it was not enabled already)
         """
         self.enable_draw()
-        if self.scribbling_mode:
-            return False
-
-        self.off_render.remove(self.scribble_overlay)
-        self.swap_layout(None, 'highlight')
-
-        self.p_central.queue_draw()
-        self.scribble_overlay.queue_draw()
-
-        self.scribbling_mode = True
-        self.pres_highlight.set_active(self.scribbling_mode)
-
-        self.undo_stack = []
-        self.undo_stack_pos = 0
-        self.get_object("scribble_redo").set_sensitive(False)
-        self.get_object("scribble_undo").set_sensitive(False)
 
         return True
 
@@ -638,103 +595,60 @@ class Scribbler(builder.Builder):
         Returns:
             `bool`: whether it was possible to disable (thus if it was not disabled already)
         """
-        if not self.scribbling_mode:
+        if not self.drawing_mode:
             return False
 
-        self.swap_layout('highlight', None)
-
-        self.off_render.add(self.scribble_overlay)
-        self.scribbling_mode = False
         self.drawing_mode = None
         self.show_button("")
-        self.pres_highlight.set_active(self.scribbling_mode)
 
         self.p_central.queue_draw()
         extras.Cursor.set_cursor(self.p_central)
 
         return True
 
-    def switch_erasing(self, *args):
-        """ Toggle the erasing mode.
-        """
-        if self.drawing_mode == "erase":
-            return self.disable_erasing()
-        return self.enable_erasing()
-
-    def enable_erasing(self, *args):
-        """ Enable the erasing mode.
-
-        Enables scribbling mode if needed.
-
-        Returns:
-            `bool`: whether it was possible to enable (thus if it was not enabled already)
-        """
-        if self.drawing_mode == "erase":
-            return False
-
-        self.before_erasing = self.scribbling_mode
-        if not self.scribbling_mode:
-            self.enable_scribbling()
-        # Probably a race condition here
-        self.enable_erase()
-
-        return True
-
-    def disable_erasing(self):
-        """ Disaable the erasing mode.
-
-        Disables scribbling mode if it was enabled by the corresponding
-        enable_erasing().
-
-        Returns:
-            `bool`: whether it was possible to disable (thus if it was not enabled already)
-        """
-        if self.drawing_mode != "erase":
-            return False
-
-        self.enable_draw()
-        if not self.before_erasing:
-            self.disable_scribbling()
-
-        return True
-
     def show_button(self, button):
-        for b in self.mode_buttons:
+        for b in self.buttons:
             opacity = 0.2 if b == button else 1
-            self.mode_buttons[b].set_opacity(opacity)
+            self.buttons[b].set_opacity(opacity)
 
     def enable_erase(self, *args):
         self.drawing_mode = "erase"
         self.show_button("erase")
         self.selected = []
         self.select_rect = [[],[]]
+        return True
 
     def enable_draw(self, *args):
         self.drawing_mode = "scribble"
         self.show_button("draw")
         self.selected = []
         self.select_rect = [[],[]]
+        return True
 
     def enable_box(self, *args):
         self.drawing_mode = "box"
         self.show_button("box")
         self.selected = []
         self.select_rect = [[],[]]
+        return True
 
     def enable_line(self, *args):
         self.drawing_mode = "line"
         self.show_button("line")
         self.selected = []
         self.select_rect = [[],[]]
+        return True
 
     def enable_select_touch(self, *args):
         self.drawing_mode = "select_t"
-        self.show_button("select_touch")
+        self.show_button("select_t")
         self.select_rect = [[],[]]
+        return True
 
     def enable_select_rect(self, *args):
         self.drawing_mode = "select_r"
-        self.show_button("select_rect")
+        self.show_button("select_r")
+        return True
 
     def enable_move(self, *args):
         if self.selected:
@@ -745,6 +659,7 @@ class Scribbler(builder.Builder):
                 pts = i[4] if i[0] == "segment" else i[3]
                 for p in pts:
                     add_point_rect_ordered(p, self.select_rect)
+        return True
 
     def add_undo(self, operation, update=False):
         if self.undo_stack_pos < len(self.undo_stack):
@@ -756,17 +671,24 @@ class Scribbler(builder.Builder):
                         operation[1][s][1] = self.undo_stack[-1][1][s][1]
                 self.undo_stack.pop()
                 self.undo_stack_pos = self.undo_stack_pos - 1
+            if self.undo_stack[-1][0] == operation[0] == 'p':
+                if [x[0] for x in self.undo_stack[-1][1]] == [x[0] for x in operation[1]]:
+                    for s in range(len(operation[1])):
+                        operation[1][s][1] = self.undo_stack[-1][1][s][1]
+                self.undo_stack.pop()
+                self.undo_stack_pos = self.undo_stack_pos - 1
         self.undo_stack.append(operation)
         self.undo_stack_pos = self.undo_stack_pos + 1
-        self.get_object("scribble_redo").set_sensitive(False)
-        self.get_object("scribble_undo").set_sensitive(True)
+        self.buttons["redo"].set_sensitive(False)
+        self.buttons["undo"].set_sensitive(True)
+        return True
 
     def undo(self, *args):
         if self.undo_stack_pos > 0 and self.undo_stack:
-            self.get_object("scribble_redo").set_sensitive(True)
+            self.buttons["redo"].set_sensitive(True)
             self.undo_stack_pos = self.undo_stack_pos - 1
             if self.undo_stack_pos == 0:
-                self.get_object("scribble_undo").set_sensitive(False)
+                self.buttons["undo"].set_sensitive(False)
             op = self.undo_stack[self.undo_stack_pos]
             if op[0] == 'a':
                 try:
@@ -787,9 +709,10 @@ class Scribbler(builder.Builder):
                 adjust_scribbles(op[1], -op[2], -op[3])
 
             self.redraw_current_slide()
+        return True
 
     def redo(self, *args):
-        if self.undo_stack_pos < len(self.undo_stack):
+        if self.undo_stack and self.undo_stack_pos < len(self.undo_stack):
             op = self.undo_stack[self.undo_stack_pos]
             if op[0] == 'a':
                 self.scribble_list.append(op[1])
@@ -812,7 +735,8 @@ class Scribbler(builder.Builder):
                 adjust_scribbles(op[1], op[2], op[3])
             self.undo_stack_pos = self.undo_stack_pos + 1
             if self.undo_stack_pos == len(self.undo_stack):
-                self.get_object("scribble_redo").set_sensitive(False)
-            self.get_object("scribble_undo").set_sensitive(True)
+                self.buttons["redo"].set_sensitive(False)
+            self.buttons["undo"].set_sensitive(True)
 
             self.redraw_current_slide()
+        return True

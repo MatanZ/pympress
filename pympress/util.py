@@ -220,6 +220,17 @@ def list_icons():
     return [get_icon_path(i) for i in icons if os.path.splitext(i)[1].lower() == '.png' and i[:9] == 'pympress-']
 
 
+def list_toolbar_icons():
+    """ List the toolbar icons from pympress' resources.
+
+    Returns:
+        `list` of `str`: The paths to the icons in the pixmaps directory
+    """
+    icons = __get_resource_list('share', 'pixmaps')
+
+    return {i.split('.')[0]: get_icon_path(i) for i in icons if os.path.splitext(i)[1].lower() in ('.png', '.svg') and i[:8] == 'toolbar-'}
+
+
 def get_log_path():
     """ Returns the appropriate path to the log file in the user app dirs.
 
