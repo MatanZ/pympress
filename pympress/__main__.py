@@ -41,7 +41,6 @@ from pympress import util
 # Setup logging, and catch all uncaught exceptions in the log file.
 # Load pympress.util early (OS and path-specific things) to load and setup gettext translation asap.
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename=util.get_log_path(), level=logging.DEBUG)
 
 
 def uncaught_handler(*exc_info):
@@ -110,6 +109,7 @@ def usage():
 {options}
 
     -h, --help                       {help}
+    -d, --debug                      {debug}
     -t mm[:ss], --talk-time=mm[:ss]  {talk_time}
                                          {talk_time_secs}
     -n position, --notes=position    {notes}
@@ -123,6 +123,7 @@ def usage():
         usage           = _('Usage: {} [options] <presentation_file>').format(sys.argv[0]),
         options         = _('Options:'),
         help            = _('This help'),
+        debug           = _('Print debug messages to console'),
         talk_time       = _('The estimated (intended) talk time in minutes'),
         talk_time_secs  = _('(and optionally seconds)'),
         notes           = _('Set the position of notes on the pdf page'),
@@ -146,12 +147,15 @@ def parse_opts(opts):
     notes_pos = None
     highlight_mode = "clear"
     config_override = {}
+    debug = False
 
     for opt, arg in opts.items():
         if opt in ("-h", "--help"):
             usage()
             sys.exit()
-        if opt in ("-n", "--notes"):
+        if opt in ("-d", "--debug"):
+            debug = True
+        elif opt in ("-n", "--notes"):
             if arg.lower()[0] == 'n': notes_pos = document.PdfPage.NONE
             if arg.lower()[0] == 'l': notes_pos = document.PdfPage.LEFT
             if arg.lower()[0] == 'r': notes_pos = document.PdfPage.RIGHT
@@ -194,7 +198,7 @@ def parse_opts(opts):
             else:
                 config_override[sect] = {key: value}
 
-    return ett, log_level, notes_pos, highlight_mode, config_override
+    return ett, log_level, notes_pos, highlight_mode, config_override, debug
 
 
 def main(argv = sys.argv[1:]):
@@ -221,15 +225,20 @@ def main(argv = sys.argv[1:]):
     ]))
 
     try:
-        opts, args = getopt.getopt(argv, "hm:n:o:t:",
-                                   ["help", "highlight-mode=", "notes=", "talk-time=", "log=", "option"])
+        opts, args = getopt.getopt(argv, "dhm:n:o:t:",
+                                   ["debug", "help", "highlight-mode=", "notes=", "talk-time=", "log=", "option"])
         opts = dict(opts)
     except getopt.GetoptError:
         usage()
         sys.exit(2)
 
-    ett, log_level, notes_pos, highlight_mode, config_override = parse_opts(opts)
-    logger.setLevel(log_level)
+    ett, log_level, notes_pos, highlight_mode, config_override, debug = parse_opts(opts)
+    if debug:
+        logging.basicConfig(level=logging.DEBUG,
+            format='%(asctime)s %(levelname)s - %(message)s')
+    else:
+        logging.basicConfig(filename=util.get_log_path())
+        logger.setLevel(log_level)
 
     # Create windows
     gui = ui.UI(highlight_mode, config_override)
