@@ -342,8 +342,8 @@ class UI(builder.Builder):
         icons = util.list_toolbar_icons()
 
         buttons = [
-            ("export_xopp", "document-save", "Export"),
-            ("export_pdf", "document-save-as", "Export PDF"),
+            ("export_xopp", "toolbar-export-xopp", "Export"),
+            ("export_pdf", "toolbar-export-pdf", "Export PDF"),
             ("", "", ""),
             ("unzoom", "zoom-fit-best", "No zoom"),
             ("zoom", "zoom-in", "Zoom in"),
