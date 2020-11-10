@@ -756,6 +756,11 @@ else:
             cls.stop_watching()
 
             directory = os.path.dirname(path)
+            if directory[:7] == 'file://':
+                directory = directory[7:]
+            if directory[-1] != '/':
+                # Needed if directory is a symlink
+                directory += '/'
             cls.monitor.on_modified = lambda e: cls.enqueue(callback, *args, **kwargs) if e.src_path == path else None
             try:
                 cls.observer.schedule(cls.monitor, directory)
@@ -812,6 +817,9 @@ else:
             Args:
                 wait (`bool`): whether to wait for the thread to have joined before returning
             """
+            if cls.observer is None:
+                return
+
             cls.observer.unschedule_all()
             if cls.observer.is_alive():
                 cls.observer.stop()
