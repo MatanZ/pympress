@@ -9,3 +9,4 @@ pympress/share/locale/*/LC_MESSAGES/pympress.mo
 *.swp
 pym
 *.gt
+pympress/share/pixmaps/icons
