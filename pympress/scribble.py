@@ -317,7 +317,6 @@ class Scribbler(builder.Builder):
             `bool`: whether the event was consumed
         """
         if self.scribble_drawing:
-            self.laser.track_pointer(self.p_da_cur, None, point=point)
             if self.pen_pointer is not None:
                 self.pen_pointer[0] = point
             if button[0]:
@@ -429,6 +428,7 @@ class Scribbler(builder.Builder):
 
         elif e_type == Gdk.EventType.BUTTON_RELEASE:
             self.scribble_drawing = False
+            self.pen_pointer[0] = []
             return True
 
         return False
@@ -603,6 +603,7 @@ class Scribbler(builder.Builder):
 
         self.drawing_mode = None
         self.show_button("")
+        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.X_CURSOR).get_image()
 
         self.p_central.queue_draw()
         extras.Cursor.set_cursor(self.p_central)
@@ -619,6 +620,7 @@ class Scribbler(builder.Builder):
         self.show_button("erase")
         self.selected = []
         self.select_rect = [[],[]]
+        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.CENTER_PTR).get_image()
         return True
 
     def enable_draw(self, *args):
@@ -626,6 +628,7 @@ class Scribbler(builder.Builder):
         self.show_button("draw")
         self.selected = []
         self.select_rect = [[],[]]
+        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.PENCIL).get_image()
         return True
 
     def enable_box(self, *args):
@@ -633,6 +636,7 @@ class Scribbler(builder.Builder):
         self.show_button("box")
         self.selected = []
         self.select_rect = [[],[]]
+        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.DOTBOX).get_image()
         return True
 
     def enable_line(self, *args):
@@ -640,17 +644,20 @@ class Scribbler(builder.Builder):
         self.show_button("line")
         self.selected = []
         self.select_rect = [[],[]]
+        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.DRAFT_SMALL).get_image()
         return True
 
     def enable_select_touch(self, *args):
         self.drawing_mode = "select_t"
         self.show_button("select_t")
         self.select_rect = [[],[]]
+        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.HAND1).get_image()
         return True
 
     def enable_select_rect(self, *args):
         self.drawing_mode = "select_r"
         self.show_button("select_r")
+        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.CROSSHAIR).get_image()
         return True
 
     def enable_move(self, *args):
@@ -662,6 +669,7 @@ class Scribbler(builder.Builder):
                 pts = i[4] if i[0] == "segment" else i[3]
                 for p in pts:
                     add_point_rect_ordered(p, self.select_rect)
+            self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.FLEUR).get_image()
         return True
 
     def add_undo(self, operation, update=False):

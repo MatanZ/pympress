@@ -255,7 +255,8 @@ class UI(builder.Builder):
         self.highlight_button.set_visible(self.show_bigbuttons)
         self.p_frame_annot.set_visible(self.show_annotations)
         self.laser.activate_pointermode()
-        self.pen_pointer_pix = GdkPixbuf.Pixbuf.new_from_file(util.get_icon_path('pointer_green' + '.png'))
+        self.pen_pointer_c = GdkPixbuf.Pixbuf.new_from_file(util.get_icon_path('pointer_green' + '.png'))
+        self.scribbler.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.X_CURSOR).get_image()
         self.hlines = self.config.getfloat('presenter', 'horizontal_lines')
         self.vlines = self.config.getfloat('presenter', 'vertical_lines')
 
@@ -1023,17 +1024,24 @@ class UI(builder.Builder):
 
             cairo_context.restore()
 
-        if widget is self.c_da or widget is self.p_da_cur:
+        if widget is self.c_da:
             # do not use the zoom matrix for the pointer, it is relative to the screen not the slide
             self.laser.render_pointer(cairo_context, ww, wh)
 
             if self.pen_pointer[0]:
-                x = self.pen_pointer[0][0] * ww - self.pen_pointer_pix.get_width() / 2
-                y = self.pen_pointer[0][1] * wh - self.pen_pointer_pix.get_height() / 2
-                Gdk.cairo_set_source_pixbuf(cairo_context, self.pen_pointer_pix, x, y)
+                x = self.pen_pointer[0][0] * ww - self.pen_pointer_c.get_width() / 2
+                y = self.pen_pointer[0][1] * wh - self.pen_pointer_c.get_height() / 2
+                Gdk.cairo_set_source_pixbuf(cairo_context, self.pen_pointer_c, x, y)
                 cairo_context.paint()
 
-        if widget is self.p_da_cur:
+        elif widget is self.p_da_cur:
+            pos = self.pen_pointer[0] if self.pen_pointer[0] else \
+                  self.laser.pointer_pos if self.laser.show_pointer else None
+            if pos:
+                x = pos[0] * ww - int(self.scribbler.pen_pointer_p.get_option('x_hot'))
+                y = pos[1] * wh - int(self.scribbler.pen_pointer_p.get_option('y_hot'))
+                Gdk.cairo_set_source_pixbuf(cairo_context, self.scribbler.pen_pointer_p, x, y)
+                cairo_context.paint()
             if self.vlines > 1:
                 for i in range(1, int(self.vlines) + 1):
                     cairo_context.set_source_rgba(0.5, 0.5, 0.5, 0.5)
