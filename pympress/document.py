@@ -725,7 +725,10 @@ class Document(object):
             out_dict['scribbles'] = self.scribbles
         out_dict['page_map'] = self.page_map
         if self.path:
-            f = open(self.path + '.pymp', "w")
+            path = self.path
+            if path[:7] == 'file://':
+                path = path[7:]
+            f = open(path + '.pymp', "w")
             json.dump(out_dict, f, cls=RGBAEncoder)
 
     def export_pdf(self, filename=None):
