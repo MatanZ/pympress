@@ -353,11 +353,13 @@ class UI(builder.Builder):
             ("", "", ""),
             ("cancel", "process-stop", "Disable scribbling"),
             ("draw", "toolbar-pen", "Draw freehand"),
-            ("select_t", "toolbar-select", "Select freehand"),
-            ("select_r", "toolbar-select_r", "Select rectangle"),
             ("erase", "toolbar-erase", "Erase"),
             ("line", "toolbar-line", "Draw line"),
             ("box", "toolbar-rect", "Draw rectangle"),
+            ("", "", ""),
+            ("select_t", "toolbar-select", "Select freehand"),
+            ("select_r", "toolbar-select_r", "Select rectangle"),
+            ("move", "toolbar-move", "Move selected"),
             ("", "", ""),
         ]
 
@@ -413,6 +415,7 @@ class UI(builder.Builder):
 
         color_button = Gtk.ColorButton.new_with_rgba(self.scribbler.scribble_color)
         color_button.connect("color-set", self.scribbler.update_color)
+        color_button.set_name("scribble_color")
         color_button.set_size_request(48,48)
         toolbar_color_button = Gtk.ToolItem.new()
         toolbar_color_button.add(color_button)

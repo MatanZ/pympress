@@ -230,6 +230,8 @@ class Scribbler(builder.Builder):
             self.disable_scribbling()
         elif command == 'pen':
             self.set_pen(name)
+        elif command == 'move':
+            self.enable_move()
         elif command == 'del_selected':
             self.del_selected()
         elif command == 'select_all':
