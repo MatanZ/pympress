@@ -659,7 +659,10 @@ class UI(builder.Builder):
             reloading (`bool`): whether we are reloading or detecting stuff from the document
         """
         try:
-            self.doc = document.Document.create(self, docpath)
+            if reloading:
+                self.doc = document.Document.create(self, docpath, old_doc=self.doc)
+            else:
+                self.doc = document.Document.create(self, docpath)
 
             if not reloading and docpath:
                 Gtk.RecentManager.get_default().add_item(self.doc.get_uri())
@@ -689,7 +692,7 @@ class UI(builder.Builder):
         self.cache.swap_document(self.doc)
         self.page_number.set_last(self.doc.pages_number())
         self.page_number.enable_labels(self.doc.has_labels())
-        self.doc.goto(page)
+        self.doc.goto(page, reloading=reloading)
         self.medias.purge_media_overlays()
 
         # Draw the new page(s)
@@ -698,7 +701,7 @@ class UI(builder.Builder):
             self.timing.reset(int(self.talk_time.delta))
             self.talk_time.reset_timer()
 
-        self.on_page_change(False)
+        self.on_page_change(False, reloading=reloading)
 
 
     def reload_document(self):
@@ -867,7 +870,7 @@ class UI(builder.Builder):
             self.cache.prerender(p)
 
 
-    def on_page_change(self, unpause=True, keep_scribbles=False):
+    def on_page_change(self, unpause=True, keep_scribbles=False, reloading=False):
         """ Switch to another page and display it.
 
         This is a kind of event which is supposed to be called only from the
@@ -907,17 +910,19 @@ class UI(builder.Builder):
         self.scribbler.disable_scribbling()
         self.zoom.stop_zooming()
 
-        # Handle saved scribbles
-        if self.highlight_mode in ('autopage', 'page') and len(self.doc.history) > 1:
-            self.doc.scribbles[self.doc.history[-2]] = self.scribbler.scribble_list[:]
-        if self.highlight_mode in ('autopage', 'clear', 'page') and not keep_scribbles:
-            self.scribbler.clear_scribble(page=True)
-        if self.highlight_mode in ('autopage', 'page'):
-            try:
-                if self.doc and self.page_preview_nb in self.doc.scribbles:
-                    self.scribbler.scribble_list += self.doc.scribbles[self.page_preview_nb][:]
-            except AttributeError:
-                pass
+        # Only on real page change
+        if not reloading:
+            # Handle saved scribbles
+            if self.highlight_mode in ('autopage', 'page') and len(self.doc.history) > 1:
+                self.doc.scribbles[self.doc.history[-2]] = self.scribbler.scribble_list[:]
+            if self.highlight_mode in ('autopage', 'clear', 'page') and not keep_scribbles:
+                self.scribbler.clear_scribble(page=True)
+            if self.highlight_mode in ('autopage', 'page'):
+                try:
+                    if self.doc and self.page_preview_nb in self.doc.scribbles:
+                        self.scribbler.scribble_list += self.doc.scribbles[self.page_preview_nb][:]
+                except AttributeError:
+                    pass
 
         # Start counter if needed
         if unpause:

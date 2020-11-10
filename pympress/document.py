@@ -654,7 +654,7 @@ class Document(object):
 
     page_map = {}
 
-    def __init__(self, builder, pop_doc, path, page=0):
+    def __init__(self, builder, pop_doc, path, page=0, old_doc=None):
         # Connect callbacks
         self.play_media                = builder.get_callback_handler('medias.play')
         self.page_change               = builder.get_callback_handler('on_page_change')
@@ -664,28 +664,42 @@ class Document(object):
         self.path = path
         self.doc = pop_doc
 
-        # Load save file, if available
-        self.page_map = {}
-        self.scribbles = {}
-        self.highlight_mode = builder.highlight_mode
-        try:
-            f = open(self.path + '.pymp', "r")
-            in_dict = json.load(f)
-            self.page_map = {int(key): val for key, val in in_dict.get('page_map', {}).items()}
+        if old_doc:
+            self.page_map = old_doc.page_map
             self.nb_pages = len(self.page_map)
-            if self.highlight_mode == "autopage" and 'scribbles' in in_dict:
-                scribbles = in_dict['scribbles']
-                for key, scribble_list in scribbles.items():
-                    self.scribbles[int(key)] = []
-                    for scribble in scribble_list:
-                        scribble[1] = Gdk.RGBA(*scribble[1]['rgba'])
-                    self.scribbles[int(key)] = scribble_list
-        except OSError:
-            pass
-        except json.decoder.JSONDecodeError:
+            self.scribbles = old_doc.scribbles.copy()
+            mapped_pages = self.page_map.values()
+            self.highlight_mode = old_doc.highlight_mode
+        else:
+            # Load save file, if available
+            self.page_map = {}
             self.scribbles = {}
+            self.highlight_mode = builder.highlight_mode
+            try:
+                f = open(self.path + '.pymp', "r")
+                in_dict = json.load(f)
+                self.page_map = {int(key): val for key, val in in_dict.get('page_map', {}).items()}
+                mapped_pages = self.page_map.values()
+                self.nb_pages = len(self.page_map)
+                if self.highlight_mode == "autopage" and 'scribbles' in in_dict:
+                    scribbles = in_dict['scribbles']
+                    for key, scribble_list in scribbles.items():
+                        self.scribbles[int(key)] = []
+                        for scribble in scribble_list:
+                            scribble[1] = Gdk.RGBA(*scribble[1]['rgba'])
+                        self.scribbles[int(key)] = scribble_list
+            except OSError:
+                pass
+            except json.decoder.JSONDecodeError:
+                self.scribbles = {}
 
-        if not self.page_map:
+        if self.page_map:
+            # If document has more pages than saved
+            for p in range(self.doc.get_n_pages()):
+                if p not in mapped_pages:
+                    self.page_map[self.nb_pages] = p
+                    self.nb_pages = self.nb_pages + 1
+        else:
             # Pages number
             self.nb_pages = self.doc.get_n_pages()
             self.page_map = {x: x for x in range(self.nb_pages)}
@@ -864,7 +878,7 @@ class Document(object):
 
 
     @staticmethod
-    def create(builder, path, page=0):
+    def create(builder, path, page=0, old_doc=None):
         """ Initializes a Document by passing it a :class:`~Poppler.Document`.
 
         Args:
@@ -880,7 +894,7 @@ class Document(object):
         else:
             uri = Document.path_to_uri(path)
             poppler_doc = Poppler.Document.new_from_file(uri, None)
-            doc = Document(builder, poppler_doc, path, page)
+            doc = Document(builder, poppler_doc, path, page, old_doc=old_doc)
 
         return doc
 
@@ -1003,7 +1017,7 @@ class Document(object):
         return self.nb_pages
 
 
-    def _do_page_change(self, number, keep_scribbles=False):
+    def _do_page_change(self, number, keep_scribbles=False, reloading=False):
         """ Perform the actual change of page and UI notification.
 
         The page number is **not** checked here, so it must be within bounds already.
@@ -1012,7 +1026,7 @@ class Document(object):
             number (`int`):  number of the destination page
         """
         self.cur_page = int(number)
-        self.page_change(keep_scribbles=keep_scribbles)
+        self.page_change(keep_scribbles=keep_scribbles, reloading=reloading)
 
 
     def has_labels(self):
@@ -1061,7 +1075,7 @@ class Document(object):
             return None
 
 
-    def goto(self, number, keep_scribbles=False):
+    def goto(self, number, keep_scribbles=False, reloading=False):
         """ Switch to another page.
 
         Args:
@@ -1079,7 +1093,7 @@ class Document(object):
                 self.history = self.history[:self.hist_pos]
             self.history.append(number)
 
-            self._do_page_change(number, keep_scribbles=keep_scribbles)
+            self._do_page_change(number, keep_scribbles=keep_scribbles, reloading=reloading)
 
 
     def goto_next(self, *args, keep_scribbles=False):
