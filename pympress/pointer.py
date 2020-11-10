@@ -219,6 +219,8 @@ class Pointer(object):
         Returns:
             `bool`: whether the event was consumed
         """
+        if self.pointer_mode == PointerMode.CONTINUOUS:
+            self.show_pointer = True
         if self.show_pointer:
             ww, wh = widget.get_allocated_width(), widget.get_allocated_height()
             if point:
@@ -252,7 +254,6 @@ class Pointer(object):
             return False
 
         if event.type == Gdk.EventType.ENTER_NOTIFY:
-            self.show_pointer = True
             extras.Cursor.set_cursor(widget, 'invisible')
 
         elif event.type == Gdk.EventType.LEAVE_NOTIFY:
