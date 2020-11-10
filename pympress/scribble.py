@@ -270,6 +270,7 @@ class Scribbler(builder.Builder):
             self.scribble_color.parse(p[0])
         self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
         self.buttons["scribble_width"].set_value(self.scribble_width)
+        self.buttons["color_button"].set_rgba(self.scribble_color)
         try:
             pen_num = int(name)
         except ValueError:
