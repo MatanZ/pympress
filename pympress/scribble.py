@@ -505,7 +505,7 @@ class Scribbler(builder.Builder):
                 s[1] = color
         else:
             self.scribble_color = color
-            self.buttons["scribble_alpha"] = self.scribble_color.alpha
+            self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
             self.config.set('scribble', 'color', self.scribble_color.to_string())
 
     def update_alpha(self, widget, event, value):
