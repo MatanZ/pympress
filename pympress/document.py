@@ -1008,7 +1008,7 @@ class Document(object):
         Args:
             number (`int`):  number of the destination page
         """
-        self.cur_page = number
+        self.cur_page = int(number)
         self.page_change(keep_scribbles=keep_scribbles)
 
 
