@@ -192,8 +192,23 @@ class Scribbler(builder.Builder):
             self.pen_event = None
         self.min_distance = builder.min_distance
 
+    def evdev_callback_buttons(self, name):
+        self.nav_scribble(name, False, command=name)
+        return False
 
-    def nav_scribble(self, name, ctrl_pressed, command = None):
+    def evdev_callback_pen(self, point):
+        self.track_scribble(point, (False, 0))
+        return False
+
+    def evdev_callback_pointer(self, point):
+        self.set_pointer(point)
+        return False
+
+    def evdev_callback_track(self, data):
+        self.toggle_scribble(*data, always=True)
+        return False
+
+    def nav_scribble(self, name, ctrl_pressed, command=None):
         """ Handles an key press event: undo or disable scribbling.
 
         Args:

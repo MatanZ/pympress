@@ -8,7 +8,7 @@
 import threading
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gdk
+from gi.repository import Gdk, GLib
 try:
     import evdev
 except ModuleNotFoundError:
@@ -58,11 +58,13 @@ class PenEventLoop():
 
     def buttons_event_loop(self, dev):
         for event in dev.read_loop():
+            if self.quit:
+                return
             if event.type == evdev.ecodes.EV_KEY:
                 if event.value == evdev.KeyEvent.key_up:
                     self.pressed_buttons.difference_update({event.code})
                     name = "BTN_"+str(event.code - evdev.ecodes.BTN_0)
-                    self.scribbler.nav_scribble(name, False, command=name)
+                    GLib.idle_add(self.scribbler.evdev_callback_buttons, name)
                 else:
                     self.pressed_buttons.add(event.code)
 
@@ -74,19 +76,19 @@ class PenEventLoop():
                 if event.value == evdev.KeyEvent.key_up:
                     self.pressed_buttons.difference_update({event.code})
                     if event.code == evdev.ecodes.BTN_DIGI:
-                        self.scribbler.set_pointer(())
+                        GLib.idle_add(self.scribbler.evdev_callback_pointer, ())
                     else:
-                        self.scribbler.toggle_scribble(Gdk.EventType.BUTTON_RELEASE, self.collect_coords['last'],
-                            (True, Gdk.BUTTON_SECONDARY if evdev.ecodes.BTN_STYLUS in self.pressed_buttons
-                             else Gdk.BUTTON_PRIMARY),
-                            always=True)
+                        GLib.idle_add(self.scribbler.evdev_callback_track,
+                            (Gdk.EventType.BUTTON_RELEASE, self.collect_coords['last'],
+                             (True, Gdk.BUTTON_SECONDARY if evdev.ecodes.BTN_STYLUS in self.pressed_buttons
+                             else Gdk.BUTTON_PRIMARY)))
                 else:
                     self.pressed_buttons.add(event.code)
                     if event.code == evdev.ecodes.BTN_TOUCH:
-                        self.scribbler.toggle_scribble(Gdk.EventType.BUTTON_PRESS, self.collect_coords['last'],
-                            (True, Gdk.BUTTON_SECONDARY if evdev.ecodes.BTN_STYLUS in self.pressed_buttons
-                             else Gdk.BUTTON_PRIMARY),
-                            always=True)
+                        GLib.idle_add(self.scribbler.evdev_callback_track,
+                            (Gdk.EventType.BUTTON_PRESS, self.collect_coords['last'],
+                             (True, Gdk.BUTTON_SECONDARY if evdev.ecodes.BTN_STYLUS in self.pressed_buttons
+                             else Gdk.BUTTON_PRIMARY)))
             if event.type == evdev.ecodes.EV_ABS:
                 if event.code == 0:
                     self.collect_coords['x'] = event.value
@@ -110,7 +112,7 @@ class PenEventLoop():
                     self.collect_coords['y'] = -1
                     self.collect_coords['last'] = point
                     if evdev.ecodes.BTN_TOUCH in self.pressed_buttons:
-                        self.scribbler.track_scribble(point, (False, 0))
+                        GLib.idle_add(self.scribbler.evdev_callback_pen, point)
                     elif evdev.ecodes.BTN_DIGI in self.pressed_buttons:
-                        self.scribbler.set_pointer(point)
+                        GLib.idle_add(self.scribbler.evdev_callback_pointer, point)
                 pass
