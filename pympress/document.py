@@ -678,7 +678,7 @@ class Document(object):
             try:
                 f = open(self.path + '.pymp', "r")
                 in_dict = json.load(f)
-                self.page_map = {int(key): val for key, val in in_dict.get('page_map', {}).items()}
+                self.page_map = {int(key): val for key, val in in_dict.get('page_map', {}).items() if val < self.doc.get_n_pages()}
                 mapped_pages = self.page_map.values()
                 self.nb_pages = len(self.page_map)
                 if self.highlight_mode == "autopage" and 'scribbles' in in_dict:
