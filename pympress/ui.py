@@ -1143,7 +1143,7 @@ class UI(builder.Builder):
             self.timing.reset(int(self.talk_time.delta))
             self.talk_time.reset_timer()
         elif command == 'highlight':
-            return self.scribbler.switch_scribbling(widget, event)
+            return self.scribbler.enable_draw(widget, event)
         elif command == 'zoom':
             return self.zoom.start_zooming(widget, event)
         elif command == 'unzoom':
