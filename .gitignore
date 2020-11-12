@@ -8,5 +8,7 @@ pympress/share/locale/*/LC_MESSAGES/pympress.mo
 
 *.swp
 pym
+tpym
 *.gt
 pympress/share/pixmaps/icons
+core.*
