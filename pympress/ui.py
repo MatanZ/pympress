@@ -1015,7 +1015,7 @@ class UI(builder.Builder):
 
             if self.show_highlights or (self.scribbler.scribbling_mode and widget is self.p_da_cur):
                 self.scribbler.draw_scribble(widget, cairo_context,
-                                             self.draw_selected or widget is not self.p_da_cur)
+                                             self.draw_selected or widget is not self.p_da_cur, page.pw)
                 if widget is self.p_da_cur and self.scribbler.selected and \
                     not self.selected_timeout:
                     self.selected_timeout = GLib.timeout_add(500, self.redraw_selected)

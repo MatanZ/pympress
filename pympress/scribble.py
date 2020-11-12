@@ -449,7 +449,7 @@ class Scribbler(builder.Builder):
         return False
 
 
-    def draw_scribble(self, widget, cairo_context, draw_selected):
+    def draw_scribble(self, widget, cairo_context, draw_selected, pw):
         """ Perform the drawings by user.
 
         Args:
@@ -457,6 +457,7 @@ class Scribbler(builder.Builder):
             cairo_context (:class:`~cairo.Context`): The canvas on which to render the drawings
         """
         ww, wh = widget.get_allocated_width(), widget.get_allocated_height()
+        pixels_per_point = ww/pw
 
         cairo_context.set_line_cap(cairo.LINE_CAP_ROUND)
 
@@ -465,7 +466,8 @@ class Scribbler(builder.Builder):
         else:
             scribbles_to_draw = (s for s in self.scribble_list if s not in self.selected)
 
-        for stype, color, width, points, rect in scribbles_to_draw:
+        for stype, color, pwidth, points, rect in scribbles_to_draw:
+            width = pwidth * pixels_per_point
             if stype == "segment":
                 points = [(p[0] * ww, p[1] * wh) for p in points]
 
