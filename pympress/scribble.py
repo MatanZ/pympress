@@ -105,6 +105,8 @@ class Scribbler(builder.Builder):
     scribble_color = Gdk.RGBA()
     #: `int` current stroke width of the scribbling tool
     scribble_width = 1
+    #: :class:`~Gdk.RGBA` current fill color of the scribbling tool
+    fill_color = Gdk.RGBA()
 
     #: :class:`~Gtk.EventBox` for the scribbling in the Content window, captures freehand drawing
     scribble_c_eb = None
@@ -182,6 +184,7 @@ class Scribbler(builder.Builder):
         self.scribble_color = Gdk.RGBA()
         self.scribble_color.parse(config.get('scribble', 'color'))
         self.scribble_width = config.getfloat('scribble', 'width')
+        self.fill_color.parse(config.get('scribble', 'fill_color'))
 
         self.config = config
 
@@ -245,6 +248,8 @@ class Scribbler(builder.Builder):
             self.disable_scribbling()
         elif command == 'pen':
             self.set_pen(name)
+        elif command == 'fill_copy':
+            self.fill_color = self.scribble_color.copy()
         elif command == 'move':
             self.enable_move()
         elif command == 'del_selected':
@@ -427,7 +432,7 @@ class Scribbler(builder.Builder):
                 self.last_del_point = None
                 self.stroke_selected = []
             elif self.drawing_mode == "box":
-                self.scribble_list.append(["box", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)]])
+                self.scribble_list.append(["box", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)], self.fill_color])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "line":
                 self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)]])
@@ -466,7 +471,7 @@ class Scribbler(builder.Builder):
         else:
             scribbles_to_draw = (s for s in self.scribble_list if s not in self.selected)
 
-        for stype, color, pwidth, points, rect in scribbles_to_draw:
+        for stype, color, pwidth, points, rect, *extra in scribbles_to_draw:
             width = pwidth * pixels_per_point
             if stype == "segment":
                 points = [(p[0] * ww, p[1] * wh) for p in points]
@@ -481,6 +486,7 @@ class Scribbler(builder.Builder):
                 cairo_context.stroke()
             if stype == "box":
                 points = [(p[0] * ww, p[1] * wh) for p in points]
+                fill_color = extra[0] if extra else color
                 cairo_context.set_source_rgba(*color)
                 cairo_context.move_to(*points[0])
                 x0, y0 = points[0]
@@ -490,7 +496,7 @@ class Scribbler(builder.Builder):
                 cairo_context.line_to(x1, y1)
                 cairo_context.line_to(x1, y0)
                 cairo_context.close_path()
-                cairo_context.set_source_rgba(*color)
+                cairo_context.set_source_rgba(*fill_color)
                 cairo_context.fill_preserve()
                 cairo_context.set_source_rgba(*color)
                 cairo_context.set_line_width(width)

@@ -687,6 +687,8 @@ class Document(object):
                         self.scribbles[int(key)] = []
                         for scribble in scribble_list:
                             scribble[1] = Gdk.RGBA(*scribble[1]['rgba'])
+                            if scribble[0] == 'box' and len(scribble) > 5:
+                                scribble[5] = Gdk.RGBA(*scribble[5]['rgba'])
                         self.scribbles[int(key)] = scribble_list
             except OSError:
                 pass
@@ -781,9 +783,20 @@ class Document(object):
                             print("    ", i[0]*page.pw, i[1]*page.ph, file=f)
                         print("</stroke>", file=f)
                     if s[0] == 'box':
+                        if len(s) > 5:
+                            #
+                            c=s[5]
+                            color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(c.red*255), int(c.green*255), int(c.blue*255), int(c.alpha*255))
+                            print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\" fill=\"{int(c.alpha*255)}\">", file=f)
+                            print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
+                            print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
+                            print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
+                            print("    ", s[3][0][0]*page.pw, s[3][1][1]*page.ph, file=f)
+                            print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
+                            print("</stroke>", file=f)
                         c=s[1]
                         color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(c.red*255), int(c.green*255), int(c.blue*255), int(c.alpha*255))
-                        print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\" fill=\"{int(c.alpha*255)}\">", file=f)
+                        print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
                         print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
                         print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
                         print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
