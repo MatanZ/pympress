@@ -388,14 +388,15 @@ class UI(builder.Builder):
                 toolbar.insert(button, 999)
                 self.scribbler.buttons[name] = button
 
-        width_scale = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, 0.1, 30, 0.1)
+        width_scale = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, 0, 299, 5)
         width_scale.set_name("scribble_width")
-        width_scale.set_digits(1)
+        width_scale.set_digits(0)
         width_scale.set_draw_value(True)
         width_scale.set_has_origin(True)
         width_scale.set_value_pos(Gtk.PositionType.RIGHT)
         width_scale.set_size_request(32,96)
         width_scale.connect("change-value", self.scribbler.update_width)
+        width_scale.connect("format-value", format_width, self.scribbler.width_curve)
         toolbar_width_scale = Gtk.ToolItem.new()
         toolbar_width_scale.add(width_scale)
         toolbar.insert(toolbar_width_scale, 999)
@@ -424,7 +425,7 @@ class UI(builder.Builder):
         self.scribbler.buttons["color_button"] = color_button
 
         alpha_scale.set_value(self.scribbler.scribble_color.alpha)
-        width_scale.set_value(self.scribbler.scribble_width)
+        width_scale.set_value(self.scribbler.width_curve_r(self.scribbler.scribble_width))
 
         self.p_central.pack_start(toolbar, False, False, 1)
         self.p_central.reorder_child(toolbar, 0)
@@ -1641,6 +1642,11 @@ class UI(builder.Builder):
         self.laser_button.set_visible(self.show_bigbuttons)
         self.highlight_button.set_visible(self.show_bigbuttons)
         self.config.set('presenter', 'show_bigbuttons', 'on' if self.show_bigbuttons else 'off')
+
+def format_width(widget, value, curve):
+    """
+    """
+    return str(curve(value))
 
 
 ##

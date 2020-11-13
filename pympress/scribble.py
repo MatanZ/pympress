@@ -28,6 +28,8 @@ from __future__ import print_function, unicode_literals
 import logging
 logger = logging.getLogger(__name__)
 
+import math
+
 import gi
 import cairo
 gi.require_version('Gtk', '3.0')
@@ -291,7 +293,7 @@ class Scribbler(builder.Builder):
         if p[0].strip():
             self.scribble_color.parse(p[0])
         self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
-        self.buttons["scribble_width"].set_value(self.scribble_width)
+        self.buttons["scribble_width"].set_value(self.width_curve_r(self.scribble_width))
         self.buttons["color_button"].set_rgba(self.scribble_color)
         try:
             pen_num = int(name)
@@ -562,8 +564,8 @@ class Scribbler(builder.Builder):
             event (:class:`~Gdk.Event`):  the GTK event triggering this update.
             value (`int`): the width of the scribbles to be drawn
         """
-        # It seems that values returned are not necessarily in range
-        width = min(max(0.1, int(value * 10) / 10), 30)
+        value = max(0, min(299, value))
+        width = self.width_curve(value)
         if self.selected:
             self.add_undo(('w', [[s, s[2], width] for s in self.selected]), True)
             for s in self.selected:
@@ -774,3 +776,9 @@ class Scribbler(builder.Builder):
 
             self.redraw_current_slide()
         return True
+
+    def width_curve_r(self, value):
+        return int(math.ceil(math.sqrt(value * 2990 - 299)))
+
+    def width_curve(self, value):
+        return ((value * value // 299) + 1) / 10
