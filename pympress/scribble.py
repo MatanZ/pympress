@@ -33,7 +33,8 @@ import math
 import gi
 import cairo
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk
+gi.require_version('PangoCairo', '1.0')
+from gi.repository import Gtk, Gdk, Pango, PangoCairo, GLib
 
 from pympress import builder, extras, evdev_pad
 
@@ -72,23 +73,22 @@ def intersects(p0, p1, scribble):
         for i in range(len(scribble[3]) - 1):
             if segments_intersect(p1, p0, scribble[3][i], scribble[3][i + 1]):
                 return True
-    elif scribble[0] == 'box':
-        if min(scribble[3][0][0], scribble[3][1][0]) <= p1[0] <= \
-           max(scribble[3][0][0], scribble[3][1][0]) and \
-           min(scribble[3][0][1], scribble[3][1][1]) <= p1[1] <= \
-           max(scribble[3][0][1], scribble[3][1][1]):
+    elif scribble[0] in ("box", "text"):
+        if min(scribble[4][0][0], scribble[4][1][0]) <= p1[0] <= \
+           max(scribble[4][0][0], scribble[4][1][0]) and \
+           min(scribble[4][0][1], scribble[4][1][1]) <= p1[1] <= \
+           max(scribble[4][0][1], scribble[4][1][1]):
             return True
     return False
 
 def adjust_points(pts_l, dx, dy):
-    for p in pts_l:
-        p[0] = p[0] + dx
-        p[1] = p[1] + dy
+    for i in range(len(pts_l)):
+        pts_l[i] = [pts_l[i][0] + dx, pts_l[i][1] + dy]
 
 def adjust_scribbles(scribbles, dx, dy):
     for s in scribbles:
         adjust_points(s[3], dx, dy)
-        if s[0] in ("segment"):
+        if s[0] in ("segment", "box", "text"):
             adjust_points(s[4], dx, dy)
 
 class Scribbler(builder.Builder):
@@ -167,6 +167,9 @@ class Scribbler(builder.Builder):
 
     laser = None
 
+    scribble_font = "serif 16"
+    text_entry = False
+
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
 
@@ -242,6 +245,8 @@ class Scribbler(builder.Builder):
             self.enable_box()
         elif command == 'line':
             self.enable_line()
+        elif command == 'text':
+            self.enable_text()
         elif command == 'select_t':
             self.enable_select_touch()
         elif command == 'select_r':
@@ -281,6 +286,21 @@ class Scribbler(builder.Builder):
         else:
             return False
         return True
+
+    def key_entered(self, val, s, state):
+        if not self.text_entry or not self.scribble_list or self.scribble_list[-1][0] != "text":
+            return
+        if val in (Gdk.KEY_Return, Gdk.KEY_Escape):
+            self.text_entry = False
+        elif val == Gdk.KEY_BackSpace:
+            self.scribble_list[-1][5] = self.scribble_list[-1][5][:-1]
+            self.scribble_list[-1][4] = [[0, 0], [0, 0]]
+        elif 31 < val < 65280 and s:
+            self.scribble_list[-1][5] = self.scribble_list[-1][5] + s
+            self.scribble_list[-1][4] = [[0, 0], [0, 0]]
+        else:
+            print(f"unknown key, {val=}, {s=}")
+        self.redraw_current_slide()
 
     def set_pen(self, name):
         pen_str = self.config.get('pens', 'pen' + name)
@@ -394,6 +414,14 @@ class Scribbler(builder.Builder):
                                 self.select_rect[0][1] <= p[1] <= self.select_rect[1][1]):
                                 self.selected.append(scribble)
                                 break
+                    if scribble[0] in ("box", "text"):
+                        for p in scribble[4]:
+                            if (self.select_rect[1][0] <= p[0] <= self.select_rect[0][0] or
+                                self.select_rect[0][0] <= p[0] <= self.select_rect[1][0]) and (
+                                self.select_rect[1][1] <= p[1] <= self.select_rect[0][1] or
+                                self.select_rect[0][1] <= p[1] <= self.select_rect[1][1]):
+                                self.selected.append(scribble)
+                                break
                 self.redraw_current_slide()
             elif self.drawing_mode == "move":
                 dx = point[0] - self.last_del_point[0]
@@ -445,6 +473,10 @@ class Scribbler(builder.Builder):
                 self.move_from = point
                 self.last_del_point = point
                 self.add_undo(['m', self.selected[:], 0, 0])
+            elif self.drawing_mode == "text":
+                self.text_entry = True
+                self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [point], [[0, 0], [0, 0]], "", self.scribble_font])
+                self.add_undo(('a', self.scribble_list[-1]))
             self.scribble_drawing = True
             return self.track_scribble(point, button)
 
@@ -489,8 +521,6 @@ class Scribbler(builder.Builder):
             if stype == "box":
                 points = [(p[0] * ww, p[1] * wh) for p in points]
                 fill_color = extra[0] if extra else color
-                cairo_context.set_source_rgba(*color)
-                cairo_context.move_to(*points[0])
                 x0, y0 = points[0]
                 x1, y1 = points[1]
                 cairo_context.move_to(x0, y0)
@@ -503,10 +533,24 @@ class Scribbler(builder.Builder):
                 cairo_context.set_source_rgba(*color)
                 cairo_context.set_line_width(width)
                 cairo_context.stroke()
+            if stype == "text":
+                layout = PangoCairo.create_layout(cairo_context)
+                PangoCairo.context_set_resolution(layout.get_context(), 72 * pixels_per_point)
+                font=extra[1]
+                layout.set_font_description(Pango.FontDescription(font))
+                layout.set_text(extra[0], len(bytearray(extra[0],"utf8")))
+                cairo_context.set_source_rgba(*color)
+                cairo_context.move_to(points[0][0] * ww, points[0][1] * wh)
+                PangoCairo.update_layout(cairo_context, layout)
+                PangoCairo.show_layout(cairo_context, layout)
+                if rect == [[0, 0], [0, 0]] and widget is self.p_da_cur:
+                    ext, _ = layout.get_pixel_extents()
+                    rect[0] = [ points[0][0] + ext.x / ww, points[0][1] + ext.y /wh ]
+                    rect[1][0] = rect[0][0] + ext.width / ww
+                    rect[1][1] = rect[0][1] + ext.height / wh
 
         if widget is self.p_da_cur and self.select_rect[1]:
                 points = [(p[0] * ww, p[1] * wh) for p in self.select_rect]
-                cairo_context.move_to(*points[0])
                 x0, y0 = points[0]
                 x1, y1 = points[1]
                 cairo_context.move_to(x0, y0)
@@ -518,6 +562,14 @@ class Scribbler(builder.Builder):
                 cairo_context.set_line_width(2)
                 cairo_context.set_dash([5,5,5])
                 cairo_context.stroke()
+
+    def update_font(self, widget):
+        if widget.get_font():
+            if self.text_entry and self.scribble_list and self.scribble_list[-1][0] == "text":
+                self.scribble_list[-1][6] = widget.get_font()
+            self.scribble_font = widget.get_font()
+            widget.get_children()[0].get_children()[0].set_label("A")
+            widget.set_use_size(widget.get_font_size() < 24576)
 
 
     def update_color(self, widget):
@@ -583,6 +635,7 @@ class Scribbler(builder.Builder):
             self.undo_stack_pos = 0
             self.buttons["undo"].set_sensitive(False)
             self.buttons["redo"].set_sensitive(False)
+            self.key_entry = False
         else:
             self.add_undo(('X', self.scribble_list[:]))
 
@@ -627,6 +680,7 @@ class Scribbler(builder.Builder):
             return False
 
         self.drawing_mode = None
+        self.text_entry = False
         self.show_button("")
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.X_CURSOR).get_image()
 
@@ -645,6 +699,7 @@ class Scribbler(builder.Builder):
         self.show_button("erase")
         self.selected = []
         self.select_rect = [[],[]]
+        self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.CENTER_PTR).get_image()
         return True
 
@@ -653,6 +708,7 @@ class Scribbler(builder.Builder):
         self.show_button("draw")
         self.selected = []
         self.select_rect = [[],[]]
+        self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.PENCIL).get_image()
         return True
 
@@ -661,6 +717,7 @@ class Scribbler(builder.Builder):
         self.show_button("box")
         self.selected = []
         self.select_rect = [[],[]]
+        self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.DOTBOX).get_image()
         return True
 
@@ -669,19 +726,30 @@ class Scribbler(builder.Builder):
         self.show_button("line")
         self.selected = []
         self.select_rect = [[],[]]
+        self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.DRAFT_SMALL).get_image()
+        return True
+
+    def enable_text(self, *args):
+        self.drawing_mode = "text"
+        self.show_button("text")
+        self.selected = []
+        self.select_rect = [[],[]]
+        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.XTERM).get_image()
         return True
 
     def enable_select_touch(self, *args):
         self.drawing_mode = "select_t"
         self.show_button("select_t")
         self.select_rect = [[],[]]
+        self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.HAND1).get_image()
         return True
 
     def enable_select_rect(self, *args):
         self.drawing_mode = "select_r"
         self.show_button("select_r")
+        self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.CROSSHAIR).get_image()
         return True
 

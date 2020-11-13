@@ -357,6 +357,7 @@ class UI(builder.Builder):
             ("erase", "toolbar-erase", "Erase"),
             ("line", "toolbar-line", "Draw line"),
             ("box", "toolbar-rect", "Draw rectangle"),
+            ("text", "toolbar-text", "Enter text"),
             ("", "", ""),
             ("select_t", "toolbar-select", "Select freehand"),
             ("select_r", "toolbar-select_r", "Select rectangle"),
@@ -423,6 +424,21 @@ class UI(builder.Builder):
         toolbar_color_button.add(color_button)
         toolbar.insert(toolbar_color_button, 999)
         self.scribbler.buttons["color_button"] = color_button
+
+        font_button = Gtk.FontButton.new()
+        font_button.connect("font-set", self.scribbler.update_font)
+        font_button.set_name("scribble_font")
+        font_button.set_size_request(48,48)
+        font_button.set_show_style(False)
+        font_button.set_show_size(False)
+        font_button.set_use_font(True)
+        font_button.set_font_name(self.scribbler.scribble_font)
+        font_button.set_use_size(font_button.get_font_size() < 24576)
+        toolbar_font_button = Gtk.ToolItem.new()
+        toolbar_font_button.add(font_button)
+        toolbar.insert(toolbar_font_button, 999)
+        self.scribbler.buttons["font_button"] = font_button
+        font_button.get_children()[0].get_children()[0].set_label("A")
 
         alpha_scale.set_value(self.scribbler.scribble_color.alpha)
         width_scale.set_value(self.scribbler.width_curve_r(self.scribbler.scribble_width))
@@ -1090,6 +1106,10 @@ class UI(builder.Builder):
         if not command:
             if event.type != Gdk.EventType.KEY_PRESS:
                 return
+
+            if self.scribbler.text_entry:
+                self.scribbler.key_entered(event.keyval, event.string, event.get_state())
+                return True
 
             name = Gdk.keyval_name(event.keyval)
             ctrl_pressed = event.get_state() & Gdk.ModifierType.CONTROL_MASK
