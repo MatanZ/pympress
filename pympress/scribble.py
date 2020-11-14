@@ -272,10 +272,14 @@ class Scribbler(builder.Builder):
             self.select_none()
         elif command == 'select_toggle':
             self.select_toggle()
+        elif command == 'next_tool':
+            self.next_tool()
         elif command == 'BTN_0':
             # Next pen
             self.pen_num = self.pen_num % 8 + 1
             self.set_pen(str(self.pen_num))
+        elif command == 'BTN_1':
+            self.next_tool()
         elif command == 'BTN_7':
             self.enable_draw()
         elif command == 'BTN_6':
@@ -374,7 +378,7 @@ class Scribbler(builder.Builder):
                 self.pen_pointer[0] = point
             if button[0]:
                 self.drag_button = button[1]
-            if self.drawing_mode == "scribble" and self.drag_button == Gdk.BUTTON_PRIMARY:
+            if self.drawing_mode == "draw" and self.drag_button == Gdk.BUTTON_PRIMARY:
                 # Ignore small movements:
                 if self.scribble_list[-1][3] and self.min_distance > 0 and self.min_distance > \
                     (self.scribble_list[-1][3][-1][0] - point[0]) * (self.scribble_list[-1][3][-1][0] - point[0]) + \
@@ -388,7 +392,7 @@ class Scribbler(builder.Builder):
                 self.redraw_current_slide()
                 return True
             elif self.drawing_mode == "erase" or (
-                 self.drawing_mode == "scribble" and self.drag_button == Gdk.BUTTON_SECONDARY):
+                 self.drawing_mode == "draw" and self.drag_button == Gdk.BUTTON_SECONDARY):
                 for scribble in self.scribble_list[:]:
                     if intersects(self.last_del_point, point, scribble):
                         self.add_undo(('d', [scribble]))
@@ -465,11 +469,11 @@ class Scribbler(builder.Builder):
             return False
 
         if e_type == Gdk.EventType.BUTTON_PRESS:
-            if self.drawing_mode == "scribble" and button[1] == Gdk.BUTTON_PRIMARY:
+            if self.drawing_mode == "draw" and button[1] == Gdk.BUTTON_PRIMARY:
                 self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [],[]])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode in ("erase", "select_t") or (
-                 self.drawing_mode == "scribble" and button[1] == Gdk.BUTTON_SECONDARY):
+                 self.drawing_mode == "draw" and button[1] == Gdk.BUTTON_SECONDARY):
                 self.last_del_point = None
                 self.stroke_selected = []
             elif self.drawing_mode == "box":
@@ -554,7 +558,7 @@ class Scribbler(builder.Builder):
                 PangoCairo.context_set_resolution(layout.get_context(), 72 * pixels_per_point)
                 font=extra[1]
                 layout.set_font_description(Pango.FontDescription(font))
-                layout.set_text(extra[0], len(bytearray(extra[0],"utf8")))
+                layout.set_text(extra[0])
                 cairo_context.set_source_rgba(*color)
                 if rect == [[0, 0], [0, 0]]:
                     _, ext = layout.get_extents()
@@ -766,7 +770,7 @@ class Scribbler(builder.Builder):
         return True
 
     def enable_draw(self, *args):
-        self.drawing_mode = "scribble"
+        self.drawing_mode = "draw"
         self.show_button("draw")
         self.selected = []
         self.select_rect = [[],[]]
@@ -814,6 +818,18 @@ class Scribbler(builder.Builder):
         self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.CROSSHAIR).get_image()
         return True
+
+    def next_tool(self, *args):
+        tools = [None, "draw", "erase", "line", "box", "text"]
+        try:
+            i = (tools.index(self.drawing_mode) + 1) % len(tools)
+        except ValueError:
+            i = 0
+        if i == 0:
+            self.disable_scribbling()
+        else:
+            method = getattr(self, "enable_" + tools[i])
+            method()
 
     def enable_move(self, *args):
         if self.selected:
