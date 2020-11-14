@@ -175,7 +175,6 @@ class UI(builder.Builder):
 
     show_highlights = True
 
-    draw_selected = True
     selected_timeout = None
 
     p_central = None
@@ -567,7 +566,7 @@ class UI(builder.Builder):
 
 
     def redraw_selected(self):
-        self.draw_selected = not self.draw_selected
+        self.scribbler.draw_blink = not self.scribbler.draw_blink
         self.p_da_cur.queue_draw()
         return True
 
@@ -1036,10 +1035,13 @@ class UI(builder.Builder):
 
             if self.show_highlights or (self.scribbler.scribbling_mode and widget is self.p_da_cur):
                 self.scribbler.draw_scribble(widget, cairo_context,
-                                             self.draw_selected or widget is not self.p_da_cur, page.pw)
+                                             self.scribbler.draw_blink or widget is not self.p_da_cur, page.pw)
                 if widget is self.p_da_cur and self.scribbler.selected and \
                     not self.selected_timeout:
                     self.selected_timeout = GLib.timeout_add(500, self.redraw_selected)
+                elif widget is self.p_da_cur and self.scribbler.text_entry and not self.selected_timeout: 
+                    self.selected_timeout = GLib.timeout_add(500, self.redraw_selected)
+
 
             self.zoom.draw_zoom_target(widget, cairo_context)
 

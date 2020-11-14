@@ -169,6 +169,7 @@ class Scribbler(builder.Builder):
 
     scribble_font = "serif 16"
     text_entry = False
+    draw_blink = True
     text_alignment = 0
     latex_dict = {}
     latex_prefixes = set()
@@ -483,12 +484,12 @@ class Scribbler(builder.Builder):
                 self.last_del_point = point
                 self.add_undo(['m', self.selected[:], 0, 0])
             elif self.drawing_mode == "text":
-                self.text_entry = True
                 if state & Gdk.ModifierType.SHIFT_MASK:
                     self.text_alignment = 0
                 if state & Gdk.ModifierType.CONTROL_MASK:
                     self.text_alignment = 1 if state & Gdk.ModifierType.SHIFT_MASK else 2
                 self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [point], [[0, 0], [0, 0]], "", self.scribble_font, self.text_alignment])
+                self.text_entry = self.scribble_list[-1]
                 self.add_undo(('a', self.scribble_list[-1]))
             self.scribble_drawing = True
             return self.track_scribble(point, button)
@@ -518,7 +519,8 @@ class Scribbler(builder.Builder):
         else:
             scribbles_to_draw = (s for s in self.scribble_list if s not in self.selected)
 
-        for stype, color, pwidth, points, rect, *extra in scribbles_to_draw:
+        for scribble in scribbles_to_draw:
+            stype, color, pwidth, points, rect, *extra = scribble
             width = pwidth * pixels_per_point
             if stype == "segment":
                 points = [(p[0] * ww, p[1] * wh) for p in points]
@@ -568,6 +570,16 @@ class Scribbler(builder.Builder):
                 PangoCairo.update_layout(cairo_context, layout)
                 PangoCairo.show_layout(cairo_context, layout)
 
+                if self.text_entry == scribble and widget is self.p_da_cur and self.draw_blink:
+                    cursor = layout.get_cursor_pos(len(bytearray(extra[0],"utf8")))
+                    cur_x = x + cursor.strong_pos.x / Pango.SCALE
+                    cur_y = points[0][1] * wh + cursor.strong_pos.y / Pango.SCALE
+                    cur_y1 = cur_y + cursor.strong_pos.height / Pango.SCALE
+                    cairo_context.move_to(cur_x, cur_y)
+                    cairo_context.line_to(cur_x, cur_y1)
+                    cairo_context.set_source_rgba(*color)
+                    cairo_context.set_line_width(2)
+                    cairo_context.stroke()
         if widget is self.p_da_cur and self.select_rect[1]:
                 points = [(p[0] * ww, p[1] * wh) for p in self.select_rect]
                 x0, y0 = points[0]
