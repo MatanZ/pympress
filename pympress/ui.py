@@ -1010,7 +1010,7 @@ class UI(builder.Builder):
 
         pb = self.cache.get(name, nb)
         if pb is None:
-            if self.resize_panes and widget in [self.p_da_next, self.p_da_cur, self.p_da_notes]:
+            if self.resize_panes and widget in (self.p_da_next, self.p_da_cur, self.p_da_notes):
                 # too slow to render here when resize_panes things
                 return
 
