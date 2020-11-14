@@ -933,6 +933,7 @@ class UI(builder.Builder):
         # Remove scribbling/zooming modes
         self.scribbler.disable_scribbling()
         self.zoom.stop_zooming()
+        self.scribbler.clean_scribble_list(self.scribbler.scribble_list)
 
         # Only on real page change
         if not reloading:

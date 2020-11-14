@@ -657,11 +657,24 @@ class Scribbler(builder.Builder):
             self.scribble_width = width
             self.config.set('scribble', 'width', str(self.scribble_width))
 
+    def clean_scribble_list(self, scribbles):
+        to_del = []
+        for i in range(len(scribbles)):
+            s = scribbles[i]
+            if s[0] == 'segment':
+                if len(s[3]) < 2:
+                    to_del.append(i)
+            elif s[0] == 'text':
+                if not s[5]:
+                    to_del.append(i)
+        for i in to_del:
+            del scribbles[i]
 
     def clear_scribble(self, *args, **kwargs):
         """ Callback for the scribble clear button, to remove all scribbles.
         """
         if 'page' in kwargs:
+            # Clearing due to moving to a new page 
             self.undo_stack = []
             self.undo_stack_pos = 0
             self.buttons["undo"].set_sensitive(False)
