@@ -169,6 +169,8 @@ class Scribbler(builder.Builder):
 
     scribble_font = "serif 16"
     text_entry = False
+    latex_dict = {}
+    latex_prefixes = set()
 
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
@@ -295,11 +297,17 @@ class Scribbler(builder.Builder):
         elif val == Gdk.KEY_BackSpace:
             self.scribble_list[-1][5] = self.scribble_list[-1][5][:-1]
             self.scribble_list[-1][4] = [[0, 0], [0, 0]]
-        elif 31 < val < 65280 and s:
+        elif 31 < val < 65280 and s and not state & Gdk.ModifierType.CONTROL_MASK:
             self.scribble_list[-1][5] = self.scribble_list[-1][5] + s
+            i = self.scribble_list[-1][5].rfind('\\', 0, -1)
+            if i > -1 and self.scribble_list[-1][5][i+1:] in self.latex_dict:
+                if self.scribble_list[-1][5][i+1:] not in self.latex_prefixes:
+                    self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + self.latex_dict[self.scribble_list[-1][5][i+1:]]
+            elif i > -1 and not self.scribble_list[-1][5][-1].isalpha() and self.scribble_list[-1][5][i+1:-1] in self.latex_dict:
+                    self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + self.latex_dict[self.scribble_list[-1][5][i+1:-1]] + self.scribble_list[-1][5][-1]
             self.scribble_list[-1][4] = [[0, 0], [0, 0]]
         else:
-            print(f"unknown key, {val=}, {s=}")
+            logger.debug(f"unknown key, {val=}, {s=}")
         self.redraw_current_slide()
 
     def set_pen(self, name):

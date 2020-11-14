@@ -127,6 +127,15 @@ def __get_resource_list(*path_parts):
         return pkg_resources.resource_listdir(req, '/'.join(('pympress',) + path_parts))
 
 
+def get_latex_dict():
+    """ Returns the path to the configuration file containing the defaults.
+
+    Returns:
+        str: The path to the portable configuration file.
+    """
+    return __get_resource_path('share', 'latex-unicode-dict.json')
+
+
 def get_locale_dir():
     """ Returns the path to the locale directory.
 

@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 import os.path
 import sys
+import json
 
 import gi
 import cairo
@@ -259,6 +260,10 @@ class UI(builder.Builder):
         self.scribbler.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.X_CURSOR).get_image()
         self.hlines = self.config.getfloat('presenter', 'horizontal_lines')
         self.vlines = self.config.getfloat('presenter', 'vertical_lines')
+
+        self.scribbler.latex_dict = json.load(open(util.get_latex_dict()))
+        keys = sorted(self.scribbler.latex_dict.keys())
+        self.scribbler.latex_prefixes = {keys[x] for x in range(len(keys)-1) if keys[x+1].startswith(keys[x])}
 
         self.scribbler.laser = self.laser
 
