@@ -628,8 +628,7 @@ class UI(builder.Builder):
         extras.FileWatcher.stop_daemon()
         self.doc.cleanup_media_files()
 
-        self.config.update_layout('notes' if self.notes_mode else 'plain',
-                                  self.p_central.get_children()[1], self.pane_handle_pos)
+        self.config.update_layout('notes' if self.notes_mode else 'plain', self.p_central.get_children()[-1], self.pane_handle_pos)
 
         if bool(self.c_win.get_window().get_state() & Gdk.WindowState.FULLSCREEN):
             util.set_screensaver(False, self.c_win.get_window())
@@ -1537,7 +1536,7 @@ class UI(builder.Builder):
         if old is None: old = 'notes' if self.notes_mode else 'plain'
         if new is None: new = 'notes' if self.notes_mode else 'plain'
 
-        self.config.update_layout(old, self.p_central.get_children()[1], self.pane_handle_pos)
+        self.config.update_layout(old, self.p_central.get_children()[-1], self.pane_handle_pos)
         pane_handles = self.replace_layout(self.config.get_layout(new), self.p_central,
                                            self.placeable_widgets, self.on_pane_event)
         self.pane_handle_pos.update(pane_handles)
