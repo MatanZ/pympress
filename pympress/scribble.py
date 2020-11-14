@@ -171,6 +171,7 @@ class Scribbler(builder.Builder):
     text_entry = False
     draw_blink = True
     text_alignment = 0
+    show_text_frames = True
     latex_dict = {}
     latex_prefixes = set()
 
@@ -579,6 +580,23 @@ class Scribbler(builder.Builder):
                     cairo_context.line_to(cur_x, cur_y1)
                     cairo_context.set_source_rgba(*color)
                     cairo_context.set_line_width(2)
+                    cairo_context.stroke()
+
+                if self.show_text_frames:
+                    # For debugging - frame
+                    points = [(p[0] * ww, p[1] * wh) for p in rect]
+                    x0, y0 = points[0]
+                    x1, y1 = points[1]
+                    x0 = x0 + x - points[0][0]
+                    x1 = x1 + x - points[0][0]
+                    cairo_context.move_to(x0, y0)
+                    cairo_context.line_to(x0, y1)
+                    cairo_context.line_to(x1, y1)
+                    cairo_context.line_to(x1, y0)
+                    cairo_context.close_path()
+                    cairo_context.set_source_rgba(0,0,0,0.5)
+                    cairo_context.set_line_width(1)
+                    cairo_context.set_dash([4,2])
                     cairo_context.stroke()
         if widget is self.p_da_cur and self.select_rect[1]:
                 points = [(p[0] * ww, p[1] * wh) for p in self.select_rect]
