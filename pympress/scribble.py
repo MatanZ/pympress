@@ -169,6 +169,7 @@ class Scribbler(builder.Builder):
 
     scribble_font = "serif 16"
     text_entry = False
+    text_alignment = 0
     latex_dict = {}
     latex_prefixes = set()
 
@@ -248,7 +249,7 @@ class Scribbler(builder.Builder):
         elif command == 'line':
             self.enable_line()
         elif command == 'text':
-            self.enable_text()
+            self.enable_text(ctrl_pressed)
         elif command == 'select_t':
             self.enable_select_touch()
         elif command == 'select_r':
@@ -446,7 +447,7 @@ class Scribbler(builder.Builder):
         return False
 
 
-    def toggle_scribble(self, e_type, point, button, always=False):
+    def toggle_scribble(self, e_type, point, button, always=False, state=0):
         """ Start/stop drawing scribbles.
 
         Args:
@@ -483,7 +484,11 @@ class Scribbler(builder.Builder):
                 self.add_undo(['m', self.selected[:], 0, 0])
             elif self.drawing_mode == "text":
                 self.text_entry = True
-                self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [point], [[0, 0], [0, 0]], "", self.scribble_font])
+                if state & Gdk.ModifierType.SHIFT_MASK:
+                    self.text_alignment = 0
+                if state & Gdk.ModifierType.CONTROL_MASK:
+                    self.text_alignment = 1 if state & Gdk.ModifierType.SHIFT_MASK else 2
+                self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [point], [[0, 0], [0, 0]], "", self.scribble_font, self.text_alignment])
                 self.add_undo(('a', self.scribble_list[-1]))
             self.scribble_drawing = True
             return self.track_scribble(point, button)
@@ -548,14 +553,20 @@ class Scribbler(builder.Builder):
                 layout.set_font_description(Pango.FontDescription(font))
                 layout.set_text(extra[0], len(bytearray(extra[0],"utf8")))
                 cairo_context.set_source_rgba(*color)
-                cairo_context.move_to(points[0][0] * ww, points[0][1] * wh)
+                if rect == [[0, 0], [0, 0]]:
+                    _, ext = layout.get_extents()
+                    rect[0] = [ points[0][0] + ext.x / ww / Pango.SCALE, points[0][1] + ext.y / wh / Pango.SCALE ]
+                    rect[1][0] = rect[0][0] + ext.width / ww / Pango.SCALE
+                    rect[1][1] = rect[0][1] + ext.height / wh / Pango.SCALE
+                if extra[2] == 2:
+                    x = (2 * points[0][0] - rect[1][0]) * ww
+                elif extra[2] == 1:
+                    x = (1.5 * points[0][0] - 0.5 * rect[1][0]) * ww
+                else:
+                    x = points[0][0] * ww
+                cairo_context.move_to(x, points[0][1] * wh)
                 PangoCairo.update_layout(cairo_context, layout)
                 PangoCairo.show_layout(cairo_context, layout)
-                if rect == [[0, 0], [0, 0]] and widget is self.p_da_cur:
-                    ext, _ = layout.get_pixel_extents()
-                    rect[0] = [ points[0][0] + ext.x / ww, points[0][1] + ext.y /wh ]
-                    rect[1][0] = rect[0][0] + ext.width / ww
-                    rect[1][1] = rect[0][1] + ext.height / wh
 
         if widget is self.p_da_cur and self.select_rect[1]:
                 points = [(p[0] * ww, p[1] * wh) for p in self.select_rect]
