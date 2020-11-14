@@ -171,7 +171,7 @@ class Scribbler(builder.Builder):
     text_entry = False
     draw_blink = True
     text_alignment = 0
-    show_text_frames = True
+    show_text_frames = False
     latex_dict = {}
     latex_prefixes = set()
 
