@@ -299,12 +299,14 @@ class Scribbler(builder.Builder):
     def key_entered(self, val, s, state):
         if not self.text_entry or not self.scribble_list or self.scribble_list[-1][0] != "text":
             return
-        if val in (Gdk.KEY_Return, Gdk.KEY_Escape):
+        if val in (Gdk.KEY_Escape, ):
             self.text_entry = False
         elif val == Gdk.KEY_BackSpace:
             self.scribble_list[-1][5] = self.scribble_list[-1][5][:-1]
             self.scribble_list[-1][4] = [[0, 0], [0, 0]]
-        elif 31 < val < 65280 and s and not state & Gdk.ModifierType.CONTROL_MASK:
+        elif (31 < val < 65280 or val in (Gdk.KEY_Return, )) and s and not state & Gdk.ModifierType.CONTROL_MASK:
+            if s != GLib.markup_escape_text(s):
+                print(s, GLib.markup_escape_text(s))
             self.scribble_list[-1][5] = self.scribble_list[-1][5] + s
             i = self.scribble_list[-1][5].rfind('\\', 0, -1)
             if i > -1 and self.scribble_list[-1][5][i+1:] in self.latex_dict:
@@ -636,6 +638,8 @@ class Scribbler(builder.Builder):
             self.add_undo(('c', [[s, s[1], color] for s in self.selected]))
             for s in self.selected:
                 s[1] = color
+        elif self.text_entry and self.scribble_list and self.scribble_list[-1][0] == "text":
+            self.scribble_list[-1][1] = color
         else:
             self.scribble_color = color
             self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
@@ -701,7 +705,7 @@ class Scribbler(builder.Builder):
             self.undo_stack_pos = 0
             self.buttons["undo"].set_sensitive(False)
             self.buttons["redo"].set_sensitive(False)
-            self.key_entry = False
+            self.text_entry = False
         else:
             self.add_undo(('X', self.scribble_list[:]))
 
