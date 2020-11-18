@@ -468,6 +468,18 @@ class Scribbler(builder.Builder):
             `bool`: whether the event was consumed
         """
         if not always and not self.drawing_mode:
+            # No tool selected.
+            # Allow selecting text for edit
+            for scribble in self.scribble_list[:]:
+                if scribble[0] == "text" and intersects(point, point, scribble):
+                    # Move scribble to end of list
+                    self.scribble_list.remove(scribble)
+                    self.scribble_list.append(scribble)
+                    self.text_entry = self.scribble_list[-1]
+                    self.enable_text()
+                    self.scribble_drawing = True
+                    self.redraw_current_slide()
+                    return True
             return False
 
         if e_type == Gdk.EventType.BUTTON_PRESS:
