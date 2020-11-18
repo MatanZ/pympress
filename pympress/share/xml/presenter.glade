@@ -648,17 +648,6 @@
                                 </child>
                               </object>
                             </child>
-                            <child type="label">
-                              <object class="GtkLabel" id="label420">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">Current slide</property>
-                                <property name="use_markup">True</property>
-                                <style>
-                                  <class name="frame-label"/>
-                                </style>
-                              </object>
-                            </child>
                           </object>
                           <packing>
                             <property name="expand">True</property>
