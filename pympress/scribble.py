@@ -705,7 +705,7 @@ class Scribbler(builder.Builder):
             elif s[0] == 'text':
                 if not s[5]:
                     to_del.append(i)
-        for i in to_del:
+        for i in sorted(to_del, reverse=True):
             del scribbles[i]
 
     def clear_scribble(self, *args, **kwargs):
