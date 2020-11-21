@@ -60,6 +60,8 @@ class UI(builder.Builder):
     #: :class:`~Gtk.CheckMenuItem` that shows whether the c_win is fullscreen
     pres_fullscreen = None
 
+    #: :class:`~Gtk.Box` for all the Presenter window
+    bigvbox = None
     #: Presenter window, as a :class:`~Gtk.Window` instance.
     p_win = None
     #: :class:`~Gtk.Box` for the Presenter window.
@@ -369,10 +371,29 @@ class UI(builder.Builder):
             ("", "", ""),
         ]
 
+        if self.config.get("presenter", "toolbar_orientation", fallback="auto")[0].lower() == 'v':
+            orientation = Gtk.Orientation.VERTICAL
+            orientation_perp = Gtk.Orientation.HORIZONTAL
+            hsize = 32
+            vsize = 96
+            value_pos = Gtk.PositionType.RIGHT
+        elif self.config.get("presenter", "toolbar_orientation", fallback="auto")[0].lower() == 'h':
+            orientation_perp = Gtk.Orientation.VERTICAL
+            orientation = Gtk.Orientation.HORIZONTAL
+            hsize = 96
+            vsize = 32
+            value_pos = Gtk.PositionType.BOTTOM
+        else:
+            orientation = Gtk.Orientation.VERTICAL
+            orientation_perp = Gtk.Orientation.HORIZONTAL
+            hsize = 32
+            vsize = 96
+            value_pos = Gtk.PositionType.RIGHT
+
         toolbar = Gtk.Toolbar()
         toolbar.set_name("toolbar")
         toolbar.set_style(Gtk.ToolbarStyle.ICONS)
-        toolbar.set_orientation(Gtk.Orientation.VERTICAL)
+        toolbar.set_orientation(orientation)
         toolbar.set_icon_size(Gtk.IconSize.DND)
 
         self.scribbler.buttons = {}
@@ -383,7 +404,7 @@ class UI(builder.Builder):
                 if icon in icons:
                     image = Gtk.Image.new_from_file(icons[icon])
                 else:
-                    image = Gtk.Image.new_from_icon_name(icon, 96)
+                    image = Gtk.Image.new_from_icon_name(icon, hsize)
                 button = Gtk.ToolButton.new(image, None)
                 button.set_name(name)
                 button.set_label(label)
@@ -393,13 +414,13 @@ class UI(builder.Builder):
                 toolbar.insert(button, 999)
                 self.scribbler.buttons[name] = button
 
-        width_scale = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, 0, 299, 5)
+        width_scale = Gtk.Scale.new_with_range(orientation, 0, 299, 5)
         width_scale.set_name("scribble_width")
         width_scale.set_digits(0)
         width_scale.set_draw_value(True)
         width_scale.set_has_origin(True)
-        width_scale.set_value_pos(Gtk.PositionType.RIGHT)
-        width_scale.set_size_request(32,96)
+        width_scale.set_value_pos(value_pos)
+        width_scale.set_size_request(hsize,vsize)
         width_scale.connect("change-value", self.scribbler.update_width)
         width_scale.connect("format-value", format_width, self.scribbler.width_curve)
         toolbar_width_scale = Gtk.ToolItem.new()
@@ -407,13 +428,13 @@ class UI(builder.Builder):
         toolbar.insert(toolbar_width_scale, 999)
         self.scribbler.buttons["scribble_width"] = width_scale
 
-        alpha_scale = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, 0, 1, 0.1)
+        alpha_scale = Gtk.Scale.new_with_range(orientation, 0, 1, 0.1)
         alpha_scale.set_name("scribble_alpha")
         alpha_scale.set_digits(2)
         alpha_scale.set_draw_value(True)
         alpha_scale.set_has_origin(True)
-        alpha_scale.set_value_pos(Gtk.PositionType.RIGHT)
-        alpha_scale.set_size_request(32,96)
+        alpha_scale.set_value_pos(value_pos)
+        alpha_scale.set_size_request(hsize,vsize)
         alpha_scale.connect("change-value", self.scribbler.update_alpha)
         toolbar_alpha_scale = Gtk.ToolItem.new()
         toolbar_alpha_scale.add(alpha_scale)
@@ -447,8 +468,12 @@ class UI(builder.Builder):
         alpha_scale.set_value(self.scribbler.scribble_color.alpha)
         width_scale.set_value(self.scribbler.width_curve_r(self.scribbler.scribble_width))
 
-        self.p_central.pack_start(toolbar, False, False, 1)
-        self.p_central.reorder_child(toolbar, 0)
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            self.bigvbox.pack_start(toolbar, False, False, 1)
+            self.bigvbox.reorder_child(toolbar, 1)
+        else:
+            self.p_central.pack_start(toolbar, False, False, 1)
+            self.p_central.reorder_child(toolbar, 0)
 
 
     def setup_screens(self):
