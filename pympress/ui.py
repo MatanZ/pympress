@@ -364,6 +364,7 @@ class UI(builder.Builder):
             ("line", "toolbar-line", "Draw line"),
             ("box", "toolbar-rect", "Draw rectangle"),
             ("text", "toolbar-text", "Enter text"),
+            ("stamp", "toolbar-stamp", "Stamp"),
             ("", "", ""),
             ("select_t", "toolbar-select", "Select freehand"),
             ("select_r", "toolbar-select_r", "Select rectangle"),

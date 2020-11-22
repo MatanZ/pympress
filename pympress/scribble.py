@@ -34,7 +34,7 @@ import gi
 import cairo
 gi.require_version('Gtk', '3.0')
 gi.require_version('PangoCairo', '1.0')
-from gi.repository import Gtk, Gdk, Pango, PangoCairo, GLib
+from gi.repository import Gtk, Gdk, Pango, PangoCairo, GLib, GdkPixbuf
 
 from pympress import builder, extras, evdev_pad
 
@@ -175,6 +175,11 @@ class Scribbler(builder.Builder):
     latex_dict = {}
     latex_prefixes = set()
 
+    stamps = {}
+    stamp_names = []
+    stamp = {}
+    stamp_point = [-1, -1]
+
     def __init__(self, config, builder, notes_mode):
         super(Scribbler, self).__init__()
 
@@ -204,6 +209,8 @@ class Scribbler(builder.Builder):
         else:
             self.pen_event = None
         self.min_distance = builder.min_distance
+
+        self.read_stamps(config)
 
     def evdev_callback_buttons(self, name):
         self.nav_scribble(name, False, command=name)
@@ -252,6 +259,8 @@ class Scribbler(builder.Builder):
             self.enable_line()
         elif command == 'text':
             self.enable_text(ctrl_pressed)
+        elif command == 'stamp':
+            self.enable_stamp()
         elif command == 'select_t':
             self.enable_select_touch()
         elif command == 'select_r':
@@ -274,6 +283,8 @@ class Scribbler(builder.Builder):
             self.select_toggle()
         elif command == 'next_tool':
             self.next_tool()
+        elif command == 'next_stamp':
+            self.next_stamp()
         elif command == 'BTN_0':
             # Next pen
             self.pen_num = self.pen_num % 8 + 1
@@ -318,6 +329,68 @@ class Scribbler(builder.Builder):
         else:
             logger.debug(f"unknown key, {val=}, {s=}")
         self.redraw_current_slide()
+
+    def read_stamps(self, config):
+        if 'stamps' in config:
+            for name in config['stamps']:
+                self.stamp_names.append(name)
+                stamp_str = self.config.get('stamps', name)
+                p = stamp_str.split(':')
+                if len(p) == 3:
+                    color = Gdk.RGBA()
+                    color.parse(p[0])
+                    self.stamps[name] = {
+                        'name': name,
+                        'color': color,
+                        'font': p[1],
+                        'str': p[2],
+                    }
+                    iconw, iconh = 32, 32
+                    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, iconw, iconh)
+                    cairo_ctx = cairo.Context(surface)
+                    cairo_ctx.set_source_rgb(1.0, 1.0, 1.0)
+                    cairo_ctx.paint()
+                    layout = PangoCairo.create_layout(cairo_ctx)
+                    layout.set_text(self.stamps[name]['str'])
+                    desc = Pango.FontDescription(self.stamps[name]['font'])
+                    layout.set_font_description(desc)
+                    cairo_ctx.set_source_rgba(*self.stamps[name]['color'])
+                    PangoCairo.update_layout(cairo_ctx, layout)
+                    w = layout.get_size()[0] / Pango.SCALE
+                    h = layout.get_size()[1] / Pango.SCALE
+                    cairo_ctx.move_to((iconw - w) / 2, (iconh - h) / 2)
+                    PangoCairo.show_layout(cairo_ctx, layout)
+                    self.stamps[name]['surface'] = surface
+                    b = surface.get_data()
+                    # Convert from BGRA (Cairo) to RGBA (Gdk)
+                    for i in range(0, len(b), 4):
+                        b[i], b[i+2] = b[i+2],b[i]
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_data(b, GdkPixbuf.Colorspace.RGB, True, 8, 32, 32, 128)
+                    self.stamps[name]['image'] = Gtk.Image.new_from_pixbuf(pixbuf)
+
+    def set_stamp(self, name=None):
+        if name not in self.stamps:
+            self.stamp = self.stamps[self.stamp_names[0]]
+        else:
+            self.stamp = self.stamps[name]
+        image = self.stamp['image']
+        image.show()
+        self.buttons["stamp"].set_icon_widget(image)
+
+    def next_stamp(self):
+        l=list(self.stamps.values())
+        try:
+            i=l.index(self.stamp)
+            self.set_stamp(l[i + 1]['name'])
+        except (ValueError, IndexError):
+            self.set_stamp()
+        self.redraw_current_slide()
+
+    def stamp_scribble(self, point):
+        if 'str' in self.stamp:
+            return ["text", self.stamp['color'], self.scribble_width, [point], [[0, 0], [0, 0]],
+                                      self.stamp['str'], self.stamp['font'], 0]
+        return None
 
     def set_pen(self, name):
         pen_str = self.config.get('pens', 'pen' + name)
@@ -385,14 +458,13 @@ class Scribbler(builder.Builder):
                 if self.scribble_list[-1][3] and self.min_distance > 0 and self.min_distance > \
                     (self.scribble_list[-1][3][-1][0] - point[0]) * (self.scribble_list[-1][3][-1][0] - point[0]) + \
                     (self.scribble_list[-1][3][-1][1] - point[1]) * (self.scribble_list[-1][3][-1][1] - point[1]):
-                    return True
+                    return False
                 if self.scribble_list[-1][3]:
                     add_point_rect_ordered(point, self.scribble_list[-1][4])
                 else:
                     self.scribble_list[-1][4]=[list(point),list(point)]
                 self.scribble_list[-1][3].append(point)
                 self.redraw_current_slide()
-                return True
             elif self.drawing_mode == "erase" or (
                  self.drawing_mode == "draw" and self.drag_button == Gdk.BUTTON_SECONDARY):
                 for scribble in self.scribble_list[:]:
@@ -401,12 +473,10 @@ class Scribbler(builder.Builder):
                         self.scribble_list.remove(scribble)
                 self.last_del_point = point
                 self.redraw_current_slide()
-                return True
             elif self.drawing_mode in ("box", "line"):
                 self.scribble_list[-1][3][1] = point
                 add_point_rect_ordered(point, self.scribble_list[-1][4])
                 self.redraw_current_slide()
-                return True
             elif self.drawing_mode == "select_t":
                 for scribble in self.scribble_list[:]:
                     if scribble not in self.stroke_selected and intersects(self.last_del_point, point, scribble):
@@ -417,7 +487,6 @@ class Scribbler(builder.Builder):
                             self.selected.append(scribble)
                 self.last_del_point = point
                 self.redraw_current_slide()
-                return True
             elif self.drawing_mode == "select_r":
                 self.select_rect[1] = list(point)
                 self.selected = []
@@ -444,13 +513,16 @@ class Scribbler(builder.Builder):
                 dx = point[0] - self.last_del_point[0]
                 dy = point[1] - self.last_del_point[1]
                 if dx == dy == 0:
-                    return True
+                    return False
                 self.last_del_point = point
                 self.undo_stack[-1][2] = point[0] - self.move_from[0]
                 self.undo_stack[-1][3] = point[1] - self.move_from[1]
                 adjust_scribbles(self.selected, dx, dy)
                 adjust_points(self.select_rect, dx, dy)
                 self.redraw_current_slide()
+        else:
+            if self.drawing_mode == "stamp":
+                self.stamp_point = point
 
         return False
 
@@ -507,15 +579,22 @@ class Scribbler(builder.Builder):
                     self.text_alignment = 0
                 if state & Gdk.ModifierType.CONTROL_MASK:
                     self.text_alignment = 1 if state & Gdk.ModifierType.SHIFT_MASK else 2
-                self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [point], [[0, 0], [0, 0]], "", self.scribble_font, self.text_alignment])
+                self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [list(point)], [[0, 0], [0, 0]], "", self.scribble_font, self.text_alignment])
                 self.text_entry = self.scribble_list[-1]
                 self.add_undo(('a', self.scribble_list[-1]))
+            elif self.drawing_mode == "stamp":
+                s = self.stamp_scribble(point)
+                if s:
+                    self.scribble_list.append(s)
+                    self.add_undo(('a', self.scribble_list[-1]))
+                    self.redraw_current_slide()
+                return True
             self.scribble_drawing = True
             return self.track_scribble(point, button)
 
         elif e_type == Gdk.EventType.BUTTON_RELEASE:
             self.scribble_drawing = False
-            self.pen_pointer[0] = []
+            self.pen_pointer = None
             return True
 
         return False
@@ -534,9 +613,14 @@ class Scribbler(builder.Builder):
         cairo_context.set_line_cap(cairo.LINE_CAP_ROUND)
 
         if draw_selected:
-            scribbles_to_draw = self.scribble_list
+            scribbles_to_draw = self.scribble_list[:]
         else:
             scribbles_to_draw = (s for s in self.scribble_list if s not in self.selected)
+
+        if self.drawing_mode == 'stamp' and widget is self.p_da_cur:
+            s = self.stamp_scribble(self.stamp_point)
+            if s:
+                scribbles_to_draw.append(s)
 
         for scribble in scribbles_to_draw:
             stype, color, pwidth, points, rect, *extra = scribble
@@ -546,6 +630,7 @@ class Scribbler(builder.Builder):
 
                 cairo_context.set_source_rgba(*color)
                 cairo_context.set_line_width(width)
+                cairo_context.set_dash([])
                 if points:
                     cairo_context.move_to(*points[0])
 
@@ -820,6 +905,17 @@ class Scribbler(builder.Builder):
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.XTERM).get_image()
         return True
 
+    def enable_stamp(self, *args):
+        if not self.stamps:
+            return True
+        self.drawing_mode = "stamp"
+        self.set_stamp()
+        self.show_button("stamp")
+        self.selected = []
+        self.select_rect = [[],[]]
+        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.BLANK_CURSOR).get_image()
+        return True
+
     def enable_select_touch(self, *args):
         self.drawing_mode = "select_t"
         self.show_button("select_t")
@@ -836,7 +932,7 @@ class Scribbler(builder.Builder):
         return True
 
     def next_tool(self, *args):
-        tools = [None, "draw", "erase", "line", "box", "text"]
+        tools = [None, "draw", "erase", "line", "box", "text", "stamp"]
         try:
             i = (tools.index(self.drawing_mode) + 1) % len(tools)
         except ValueError:
@@ -853,7 +949,7 @@ class Scribbler(builder.Builder):
             self.show_button("move")
             self.select_rect = [self.selected[0][3][0][:],self.selected[0][3][0][:]]
             for i in self.selected:
-                pts = i[4] if i[0] == "segment" else i[3]
+                pts = i[4]
                 for p in pts:
                     add_point_rect_ordered(p, self.select_rect)
             self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.FLEUR).get_image()
