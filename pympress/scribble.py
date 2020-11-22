@@ -714,7 +714,16 @@ class Scribbler(builder.Builder):
     def update_font(self, widget):
         if widget.get_font():
             if self.text_entry and self.scribble_list and self.scribble_list[-1][0] == "text":
+                # TODO: undo
                 self.scribble_list[-1][6] = widget.get_font()
+                self.scribble_list[-1][4] = [[0,0],[0,0]]
+
+            if self.selected:
+                # TODO: undo
+                for s in self.selected:
+                    if s[0] == "text":
+                        s[6] = widget.get_font()
+                        s[4] = [[0,0],[0,0]]
             self.scribble_font = widget.get_font()
             widget.get_children()[0].get_children()[0].set_label("A")
             widget.set_use_size(widget.get_font_size() < 24576)
