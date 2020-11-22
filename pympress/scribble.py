@@ -165,8 +165,6 @@ class Scribbler(builder.Builder):
 
     min_distance = 0
 
-    laser = None
-
     scribble_font = "serif 16"
     text_entry = False
     draw_blink = True
@@ -316,8 +314,6 @@ class Scribbler(builder.Builder):
             self.scribble_list[-1][5] = self.scribble_list[-1][5][:-1]
             self.scribble_list[-1][4] = [[0, 0], [0, 0]]
         elif (31 < val < 65280 or val in (Gdk.KEY_Return, )) and s and not state & Gdk.ModifierType.CONTROL_MASK:
-            if s != GLib.markup_escape_text(s):
-                print(s, GLib.markup_escape_text(s))
             self.scribble_list[-1][5] = self.scribble_list[-1][5] + s
             i = self.scribble_list[-1][5].rfind('\\', 0, -1)
             if i > -1 and self.scribble_list[-1][5][i+1:] in self.latex_dict:
@@ -797,7 +793,7 @@ class Scribbler(builder.Builder):
         """ Callback for the scribble clear button, to remove all scribbles.
         """
         if 'page' in kwargs:
-            # Clearing due to moving to a new page 
+            # Clearing due to moving to a new page
             self.undo_stack = []
             self.undo_stack_pos = 0
             self.buttons["undo"].set_sensitive(False)

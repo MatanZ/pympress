@@ -1066,7 +1066,7 @@ class UI(builder.Builder):
                 if widget is self.p_da_cur and self.scribbler.selected and \
                     not self.selected_timeout:
                     self.selected_timeout = GLib.timeout_add(500, self.redraw_selected)
-                elif widget is self.p_da_cur and self.scribbler.text_entry and not self.selected_timeout: 
+                elif widget is self.p_da_cur and self.scribbler.text_entry and not self.selected_timeout:
                     self.selected_timeout = GLib.timeout_add(500, self.redraw_selected)
 
 
