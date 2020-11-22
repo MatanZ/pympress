@@ -1087,7 +1087,7 @@ class UI(builder.Builder):
         elif widget is self.p_da_cur:
             pos = self.pen_pointer[0] if self.pen_pointer[0] else \
                   self.laser.pointer_pos if self.laser.show_pointer else None
-            if pos:
+            if pos and self.scribbler.pen_pointer_p:
                 x = pos[0] * ww - int(self.scribbler.pen_pointer_p.get_option('x_hot'))
                 y = pos[1] * wh - int(self.scribbler.pen_pointer_p.get_option('y_hot'))
                 Gdk.cairo_set_source_pixbuf(cairo_context, self.scribbler.pen_pointer_p, x, y)
