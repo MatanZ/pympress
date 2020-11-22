@@ -660,19 +660,28 @@ class Scribbler(builder.Builder):
                     rect[0] = [ points[0][0] + ext.x / ww / Pango.SCALE, points[0][1] + ext.y / wh / Pango.SCALE ]
                     rect[1][0] = rect[0][0] + ext.width / ww / Pango.SCALE
                     rect[1][1] = rect[0][1] + ext.height / wh / Pango.SCALE
-                if extra[2] == 2:
-                    x = (2 * points[0][0] - rect[1][0]) * ww
-                elif extra[2] == 1:
-                    x = (1.5 * points[0][0] - 0.5 * rect[1][0]) * ww
-                else:
-                    x = points[0][0] * ww
-                cairo_context.move_to(x, points[0][1] * wh)
+                    if rect[0][0] > rect[1][0]:
+                        rect[0][0], rect[1][0] = rect[1][0], rect[0][0]
+                    if rect[0][1] > rect[1][1]:
+                        rect[0][1], rect[1][1] = rect[1][1], rect[0][1]
+
+                    if extra[2] == 2:
+                        x = (2 * points[0][0] - rect[1][0])
+                    elif extra[2] == 1:
+                        x = (1.5 * points[0][0] - 0.5 * rect[1][0])
+                    else:
+                        x = points[0][0]
+                    dx = x - points[0][0]
+                    rect[0][0] += dx
+                    rect[1][0] += dx
+
+                cairo_context.move_to(rect[0][0] * ww, points[0][1] * wh)
                 PangoCairo.update_layout(cairo_context, layout)
                 PangoCairo.show_layout(cairo_context, layout)
 
                 if self.text_entry == scribble and widget is self.p_da_cur and self.draw_blink:
                     cursor = layout.get_cursor_pos(len(bytearray(extra[0],"utf8")))
-                    cur_x = x + cursor.strong_pos.x / Pango.SCALE
+                    cur_x = rect[0][0] * ww + cursor.strong_pos.x / Pango.SCALE
                     cur_y = points[0][1] * wh + cursor.strong_pos.y / Pango.SCALE
                     cur_y1 = cur_y + cursor.strong_pos.height / Pango.SCALE
                     cairo_context.move_to(cur_x, cur_y)
@@ -681,13 +690,11 @@ class Scribbler(builder.Builder):
                     cairo_context.set_line_width(2)
                     cairo_context.stroke()
 
-                if self.show_text_frames:
+                if self.show_text_frames and widget is self.p_da_cur:
                     # For debugging - frame
                     points = [(p[0] * ww, p[1] * wh) for p in rect]
                     x0, y0 = points[0]
                     x1, y1 = points[1]
-                    x0 = x0 + x - points[0][0]
-                    x1 = x1 + x - points[0][0]
                     cairo_context.move_to(x0, y0)
                     cairo_context.line_to(x0, y1)
                     cairo_context.line_to(x1, y1)
