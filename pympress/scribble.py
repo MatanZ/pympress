@@ -931,7 +931,8 @@ class Scribbler(builder.Builder):
         if not self.stamps:
             return True
         self.drawing_mode = "stamp"
-        self.set_stamp()
+        if not self.stamp:
+            self.set_stamp()
         self.show_button("stamp")
         self.selected = []
         self.select_rect = [[],[]]
