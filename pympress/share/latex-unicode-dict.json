@@ -114,13 +114,17 @@
 "mathcal{L}": "ℒ",
 "ell": "ℓ",
 "mathbb{N}": "ℕ",
+"NN": "ℕ",
 "wp": "℘",
 "mathbb{P}": "ℙ",
 "mathbb{Q}": "ℚ",
+"QQ": "ℚ",
 "mathcal{R}": "ℛ",
 "Re": "ℜ",
 "mathbb{R}": "ℝ",
+"RR": "ℝ",
 "mathbb{Z}": "ℤ",
+"ZZ": "ℤ",
 "tcohm": "Ω",
 "mho": "℧",
 "mathfrak{Z}": "ℨ",
@@ -1555,6 +1559,10 @@
 "sp7": "⁷",
 "sp8": "⁸",
 "sp9": "⁹",
+
+"nin": "∉",
+"se": "⊆",
+"nse": "⊈",
 
 "XYZ": ""
 }
