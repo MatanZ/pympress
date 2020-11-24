@@ -118,6 +118,7 @@ class Scribbler(builder.Builder):
     #: :class:`~Gtk.Box` in the Presenter window, where we insert scribbling.
     p_central = None
     p_da_cur = None
+    c_da = None
 
     #: :class:`~Gtk.Button` that is clicked to stop zooming, unsensitive when there is no zooming
     zoom_stop_button = None
@@ -653,7 +654,15 @@ class Scribbler(builder.Builder):
                 PangoCairo.context_set_resolution(layout.get_context(), 72 * pixels_per_point)
                 font=extra[1]
                 layout.set_font_description(Pango.FontDescription(font))
-                layout.set_text(extra[0])
+                if self.text_entry == scribble and widget is self.c_da:
+                    # Don't show tex shortcut
+                    i = extra[0].rfind('\\', 0, -1)
+                    if i > -1 and (i == len(extra[0]) - 1 or (i < len(extra[0]) - 1 and extra[0][i+1].isalnum())):
+                        layout.set_text(extra[0][:i])
+                    else:
+                        layout.set_text(extra[0])
+                else:
+                    layout.set_text(extra[0])
                 cairo_context.set_source_rgba(*color)
                 if rect == [[0, 0], [0, 0]]:
                     _, ext = layout.get_extents()
