@@ -850,6 +850,15 @@ class UI(builder.Builder):
         """
         return self.notes_mode
 
+    def page_inserted(self, num):
+        """ This page was inserted mid document. Push scribbles one page forward.
+        """
+        for p in range(self.doc.nb_pages, num, -1):
+            if p - 1 in self.doc.scribbles:
+                self.doc.scribbles[p] = self.doc.scribbles[p - 1]
+                del self.doc.scribbles[p - 1]
+        self.redraw_current_slide()
+
     def insert_page(self, num):
         """ Insert an empty page before page num in document
         """
@@ -1231,6 +1240,8 @@ class UI(builder.Builder):
             self.redraw_current_slide()
         elif command == "insert_blank":
             self.insert_page(self.doc.cur_page + 1)
+        elif command == "page_inserted":
+            self.page_inserted(self.doc.cur_page + 1)
         elif command == "export_pdf":
             # Make sure the current scribbles are also exported
             if self.highlight_mode in ('autopage') and self.doc.cur_page >= 0:
