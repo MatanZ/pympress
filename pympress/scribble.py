@@ -591,7 +591,8 @@ class Scribbler(builder.Builder):
 
         elif e_type == Gdk.EventType.BUTTON_RELEASE:
             self.scribble_drawing = False
-            self.pen_pointer = None
+            if self.pen_pointer:
+                self.pen_pointer[0] = []
             return True
 
         return False
