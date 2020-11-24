@@ -863,7 +863,7 @@ class Scribbler(builder.Builder):
         self.show_button("")
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.X_CURSOR).get_image()
 
-        self.p_central.queue_draw()
+        self.redraw_current_slide()
         extras.Cursor.set_cursor(self.p_central)
 
         return True
