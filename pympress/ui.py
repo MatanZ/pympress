@@ -1286,6 +1286,12 @@ class UI(builder.Builder):
             return False
 
 
+    def track_enter_leave(self, widget, event):
+        if event.type == Gdk.EventType.LEAVE_NOTIFY and widget is self.p_da_cur:
+            self.scribbler.stamp_point = [-1, -1]
+        return self.laser.track_enter_leave(widget, event)
+
+
     def track_motions(self, widget, event):
         """ Track mouse motion events.
 
