@@ -1069,7 +1069,7 @@ class UI(builder.Builder):
             cairo_context.save()
             cairo_context.transform(zoom_matrix)
 
-            if self.show_highlights or (self.scribbler.scribbling_mode and widget is self.p_da_cur):
+            if self.show_highlights or (self.scribbler.drawing_mode and widget is self.p_da_cur):
                 self.scribbler.draw_scribble(widget, cairo_context,
                                              self.scribbler.draw_blink or widget is not self.p_da_cur, page.pw)
                 if widget is self.p_da_cur and self.scribbler.selected and \
