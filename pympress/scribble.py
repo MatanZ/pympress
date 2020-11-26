@@ -613,7 +613,7 @@ class Scribbler(builder.Builder):
         if draw_selected:
             scribbles_to_draw = self.scribble_list[:]
         else:
-            scribbles_to_draw = (s for s in self.scribble_list if s not in self.selected)
+            scribbles_to_draw = [s for s in self.scribble_list if s not in self.selected]
 
         if self.drawing_mode == 'stamp' and widget is self.p_da_cur:
             s = self.stamp_scribble(self.stamp_point)
