@@ -317,11 +317,25 @@ class Scribbler(builder.Builder):
         elif (31 < val < 65280 or val in (Gdk.KEY_Return, )) and s and not state & Gdk.ModifierType.CONTROL_MASK:
             self.scribble_list[-1][5] = self.scribble_list[-1][5] + s
             i = self.scribble_list[-1][5].rfind('\\', 0, -1)
-            if i > -1 and self.scribble_list[-1][5][i+1:] in self.latex_dict:
-                if self.scribble_list[-1][5][i+1:] not in self.latex_prefixes:
-                    self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + self.latex_dict[self.scribble_list[-1][5][i+1:]]
-            elif i > -1 and not self.scribble_list[-1][5][-1].isalpha() and self.scribble_list[-1][5][i+1:-1] in self.latex_dict:
+            if i > -1:
+                if self.scribble_list[-1][5][i+1:] in self.latex_dict:
+                    if self.scribble_list[-1][5][i+1:] not in self.latex_prefixes:
+                        self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + self.latex_dict[self.scribble_list[-1][5][i+1:]]
+                elif not self.scribble_list[-1][5][-1].isalpha() and self.scribble_list[-1][5][i+1:-1] in self.latex_dict:
                     self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + self.latex_dict[self.scribble_list[-1][5][i+1:-1]] + self.scribble_list[-1][5][-1]
+                elif i < len(self.scribble_list[-1][5]) - 3 and self.scribble_list[-1][5][i+1] == 'u':
+                    if self.scribble_list[-1][5][-1].lower() not in "0123456789abcdef":
+                        try:
+                            h = int(self.scribble_list[-1][5][i+2:-1],16)
+                            self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + chr(h)
+                        except ValueError:
+                            pass
+                    elif i == len(self.scribble_list[-1][5]) - 7:
+                        try:
+                            h = int(self.scribble_list[-1][5][i+2:],16)
+                            self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + chr(h)
+                        except ValueError:
+                            pass
             self.scribble_list[-1][4] = [[0, 0], [0, 0]]
         else:
             logger.debug(f"unknown key, {val=}, {s=}")
