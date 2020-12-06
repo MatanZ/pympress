@@ -626,7 +626,7 @@ class Scribbler(builder.Builder):
 
         cairo_context.set_line_cap(cairo.LINE_CAP_ROUND)
 
-        if draw_selected:
+        if draw_selected or self.drawing_mode not in ("select_t", "select_r", "move"):
             scribbles_to_draw = self.scribble_list[:]
         else:
             scribbles_to_draw = [s for s in self.scribble_list if s not in self.selected]
