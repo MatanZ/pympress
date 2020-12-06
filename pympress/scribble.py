@@ -886,6 +886,7 @@ class Scribbler(builder.Builder):
 
         self.drawing_mode = None
         self.text_entry = False
+        self.select_rect = [[],[]]
         self.show_button("")
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.X_CURSOR).get_image()
 
