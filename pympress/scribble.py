@@ -308,9 +308,10 @@ class Scribbler(builder.Builder):
 
     def key_entered(self, val, s, state):
         if not self.text_entry or not self.scribble_list or self.scribble_list[-1][0] != "text":
-            return
-        if val in (Gdk.KEY_Escape, ):
+            return False
+        if val in (Gdk.KEY_Escape, Gdk.KEY_Page_Down, Gdk. KEY_Page_Up):
             self.text_entry = False
+            return val in (Gdk.KEY_Escape, )
         elif val == Gdk.KEY_BackSpace:
             self.scribble_list[-1][5] = self.scribble_list[-1][5][:-1]
             self.scribble_list[-1][4] = [[0, 0], [0, 0]]
@@ -340,6 +341,7 @@ class Scribbler(builder.Builder):
         else:
             logger.debug(f"unknown key, {val=}, {s=}")
         self.redraw_current_slide()
+        return True
 
     def read_stamps(self, config):
         if 'stamps' in config:

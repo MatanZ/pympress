@@ -1149,8 +1149,7 @@ class UI(builder.Builder):
             if event.type != Gdk.EventType.KEY_PRESS:
                 return
 
-            if self.scribbler.text_entry:
-                self.scribbler.key_entered(event.keyval, event.string, event.get_state())
+            if self.scribbler.text_entry and self.scribbler.key_entered(event.keyval, event.string, event.get_state()):
                 return True
 
             name = Gdk.keyval_name(event.keyval)
