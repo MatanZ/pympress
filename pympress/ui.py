@@ -790,6 +790,16 @@ class UI(builder.Builder):
         if os.path.isfile(received) and received.lower().endswith('.pdf'):
             self.swap_document(os.path.abspath(received))
 
+    def export_xopp(self, *args):
+        if self.highlight_mode in ('autopage') and self.doc.cur_page >= 0:
+            self.doc.scribbles[self.doc.cur_page] = self.scribbler.scribble_list[:]
+        self.doc.export_xopp()
+
+    def export_pdf(self, *args):
+        # Make sure the current scribbles are also exported
+        if self.highlight_mode in ('autopage') and self.doc.cur_page >= 0:
+            self.doc.scribbles[self.doc.cur_page] = self.scribbler.scribble_list[:]
+        self.doc.export_pdf()
 
     def pick_file(self, *args):
         """ Ask the user which file he means to open.
@@ -1242,14 +1252,9 @@ class UI(builder.Builder):
         elif command == "page_inserted":
             self.page_inserted(self.doc.cur_page + 1)
         elif command == "export_pdf":
-            # Make sure the current scribbles are also exported
-            if self.highlight_mode in ('autopage') and self.doc.cur_page >= 0:
-                self.doc.scribbles[self.doc.cur_page] = self.scribbler.scribble_list[:]
-            self.doc.export_pdf()
+            self.export_pdf()
         elif command == "export_xopp":
-            if self.highlight_mode in ('autopage') and self.doc.cur_page >= 0:
-                self.doc.scribbles[self.doc.cur_page] = self.scribbler.scribble_list[:]
-            self.doc.export_xopp()
+            self.export_xopp()
         else:
             if command:
                 logger.error('ERROR: missing command "{}" for {}{}{}{}'

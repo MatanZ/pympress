@@ -75,6 +75,26 @@
                       </object>
                     </child>
                     <child>
+                      <object class="GtkImageMenuItem" id="file_export_pdf">
+                        <property name="label">Export PDF</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
+                        <property name="use_stock">True</property>
+                        <signal name="activate" handler="export_pdf" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem" id="file_export_xopp">
+                        <property name="label">Export XOPP</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
+                        <property name="use_stock">True</property>
+                        <signal name="activate" handler="export_xopp" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
                       <object class="GtkImageMenuItem" id="file_close">
                         <property name="label">gtk-close</property>
                         <property name="visible">True</property>
