@@ -309,38 +309,50 @@ class Scribbler(builder.Builder):
     def key_entered(self, val, s, state):
         if not self.text_entry or not self.scribble_list or self.scribble_list[-1][0] != "text":
             return False
+        pos = self.text_pos
         if val in (Gdk.KEY_Escape, Gdk.KEY_Page_Down, Gdk. KEY_Page_Up):
             self.text_entry = False
             return val in (Gdk.KEY_Escape, )
         elif val == Gdk.KEY_BackSpace:
-            self.scribble_list[-1][5] = self.scribble_list[-1][5][:-1]
-            self.scribble_list[-1][4] = [[0, 0], [0, 0]]
+            self.text_entry[5] = self.text_entry[5][:pos - 1] + self.text_entry[5][pos:]
+            pos = pos - 1
+            self.text_entry[4] = [[0, 0], [0, 0]]
+        elif val == Gdk.KEY_Left and pos > 0:
+            pos = pos - 1
+        elif val == Gdk.KEY_Right and pos < len(self.text_entry[5]):
+            pos = pos + 1
         elif (31 < val < 65280 or val in (Gdk.KEY_Return, )) and s and not state & Gdk.ModifierType.CONTROL_MASK:
-            self.scribble_list[-1][5] = self.scribble_list[-1][5] + s
-            i = self.scribble_list[-1][5].rfind('\\', 0, -1)
+            self.text_entry[5] = self.text_entry[5][:pos] + s + self.text_entry[5][pos:]
+            pos = pos + 1
+            i = self.text_entry[5].rfind('\\', 0, pos - 1)
             if i > -1:
-                if self.scribble_list[-1][5][i+1:] in self.latex_dict:
-                    if self.scribble_list[-1][5][i+1:] not in self.latex_prefixes:
-                        self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + self.latex_dict[self.scribble_list[-1][5][i+1:]]
-                elif not self.scribble_list[-1][5][-1].isalpha() and self.scribble_list[-1][5][i+1:-1] in self.latex_dict:
-                    self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + self.latex_dict[self.scribble_list[-1][5][i+1:-1]] + self.scribble_list[-1][5][-1]
-                elif i < len(self.scribble_list[-1][5]) - 3 and self.scribble_list[-1][5][i+1] == 'u':
-                    if self.scribble_list[-1][5][-1].lower() not in "0123456789abcdef":
+                if self.text_entry[5][i+1:pos] in self.latex_dict:
+                    if self.text_entry[5][i+1:pos] not in self.latex_prefixes:
+                        self.text_entry[5] = self.text_entry[5][:i] + self.latex_dict[self.text_entry[5][i+1:pos]] + self.text_entry[5][pos:]
+                        pos = i + 1
+                elif not self.text_entry[5][pos-1].isalpha() and self.text_entry[5][i+1:pos-1] in self.latex_dict:
+                    self.text_entry[5] = self.text_entry[5][:i] + self.latex_dict[self.text_entry[5][i+1:pos-1]] + self.text_entry[5][pos-1:]
+                    pos = i + 2
+                elif i < len(self.text_entry[5]) - 3 and self.text_entry[5][i+1] == 'u':
+                    if self.text_entry[5][-1].lower() not in "0123456789abcdef":
                         try:
-                            h = int(self.scribble_list[-1][5][i+2:-1],16)
-                            self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + chr(h)
+                            h = int(self.text_entry[5][i+2:pos-1],16)
+                            self.text_entry[5] = self.text_entry[5][:i] + chr(h) + self.text_entry[5][pos:]
+                            pos = i + 1
                         except ValueError:
                             pass
-                    elif i == len(self.scribble_list[-1][5]) - 7:
+                    elif i == pos - 7:
                         try:
-                            h = int(self.scribble_list[-1][5][i+2:],16)
-                            self.scribble_list[-1][5] = self.scribble_list[-1][5][:i] + chr(h)
+                            h = int(self.text_entry[5][i+2:pos],16)
+                            self.text_entry[5] = self.text_entry[5][:i] + chr(h) + self.text_entry[5][pos:]
+                            pos = i + 1
                         except ValueError:
                             pass
-            self.scribble_list[-1][4] = [[0, 0], [0, 0]]
+            self.text_entry[4] = [[0, 0], [0, 0]]
         else:
-            logger.debug(f"unknown key, {val=}, {s=}")
+            logger.debug(f"unknown key, {val=}, {s=}, name={Gdk.keyval_name(val)}")
         self.redraw_current_slide()
+        self.text_pos = pos
         return True
 
     def read_stamps(self, config):
@@ -561,6 +573,7 @@ class Scribbler(builder.Builder):
                     self.scribble_list.remove(scribble)
                     self.scribble_list.append(scribble)
                     self.text_entry = self.scribble_list[-1]
+                    self.text_pos = len(self.text_entry[5])
                     self.enable_text()
                     self.scribble_drawing = True
                     self.redraw_current_slide()
@@ -596,6 +609,7 @@ class Scribbler(builder.Builder):
                     self.text_alignment = 1 if state & Gdk.ModifierType.SHIFT_MASK else 2
                 self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [list(point)], [[0, 0], [0, 0]], "", self.scribble_font, self.text_alignment])
                 self.text_entry = self.scribble_list[-1]
+                self.text_pos = len(self.text_entry[5])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "stamp":
                 s = self.stamp_scribble(point)
@@ -708,7 +722,7 @@ class Scribbler(builder.Builder):
                 PangoCairo.show_layout(cairo_context, layout)
 
                 if self.text_entry == scribble and widget is self.p_da_cur and self.draw_blink:
-                    cursor = layout.get_cursor_pos(len(bytearray(extra[0],"utf8")))
+                    cursor = layout.get_cursor_pos(len(bytearray(extra[0][:self.text_pos],"utf8")))
                     cur_x = rect[0][0] * ww + cursor.strong_pos.x / Pango.SCALE
                     cur_y = points[0][1] * wh + cursor.strong_pos.y / Pango.SCALE
                     cur_y1 = cur_y + cursor.strong_pos.height / Pango.SCALE
