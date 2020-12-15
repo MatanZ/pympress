@@ -955,6 +955,7 @@ class Scribbler(builder.Builder):
         self.show_button("stamp")
         self.selected = []
         self.select_rect = [[],[]]
+        self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.BLANK_CURSOR).get_image()
         return True
 
