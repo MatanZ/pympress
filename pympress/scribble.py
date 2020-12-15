@@ -603,11 +603,19 @@ class Scribbler(builder.Builder):
                 self.last_del_point = point
                 self.add_undo(['m', self.selected[:], 0, 0])
             elif self.drawing_mode == "text":
-                if state & Gdk.ModifierType.SHIFT_MASK:
-                    self.text_alignment = 0
                 if state & Gdk.ModifierType.CONTROL_MASK:
                     self.text_alignment = 1 if state & Gdk.ModifierType.SHIFT_MASK else 2
-                self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [list(point)], [[0, 0], [0, 0]], "", self.scribble_font, self.text_alignment])
+                    alignment = self.text_alignment
+                elif state & Gdk.ModifierType.SHIFT_MASK:
+                    self.text_alignment = 0
+                    alignment = self.text_alignment
+                elif button[1] == Gdk.BUTTON_SECONDARY:
+                    alignment = 2
+                elif button[1] == Gdk.BUTTON_MIDDLE:
+                    alignment = 1
+                else:
+                    alignment = self.text_alignment
+                self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [list(point)], [[0, 0], [0, 0]], "", self.scribble_font, alignment])
                 self.text_entry = self.scribble_list[-1]
                 self.text_pos = len(self.text_entry[5])
                 self.add_undo(('a', self.scribble_list[-1]))
