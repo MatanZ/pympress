@@ -772,6 +772,8 @@ class Document(object):
             print(f"<page width=\"{page.pw}\" height=\"{page.ph}\">", file=f)
             if self.page_map[p] >= 0:
                 print(f"<background type=\"pdf\" domain=\"absolute\" filename=\"{self.path}\" pageno=\"{self.page_map[p]+1}ll\"/>", file=f)
+            else:
+                print('<background type="solid" color="#ffffffff" style="plain"/>', file=f)
             print("<layer>", file=f)
             if p in self.scribbles:
                 for s in self.scribbles[p]:
