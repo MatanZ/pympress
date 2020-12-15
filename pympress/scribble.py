@@ -576,7 +576,9 @@ class Scribbler(builder.Builder):
                 self.last_del_point = None
                 self.stroke_selected = []
             elif self.drawing_mode == "box":
-                self.scribble_list.append(["box", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)], self.fill_color])
+                fill_color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_SECONDARY else self.fill_color
+                color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_MIDDLE else self.scribble_color
+                self.scribble_list.append(["box", color, self.scribble_width, [point, point], [list(point), list(point)], fill_color])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "line":
                 self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)]])

@@ -784,7 +784,7 @@ class Document(object):
                             print("    ", i[0]*page.pw, i[1]*page.ph, file=f)
                         print("</stroke>", file=f)
                     if s[0] == 'box':
-                        if len(s) > 5:
+                        if len(s) > 5 and s[5].alpha > 0:
                             fill_color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(s[5].red*255), int(s[5].green*255), int(s[5].blue*255), int(s[5].alpha*255))
                             print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{fill_color}\" width=\"{s[2]}\" fill=\"{int(s[5].alpha*255)}\">", file=f)
                             print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
@@ -793,13 +793,14 @@ class Document(object):
                             print("    ", s[3][0][0]*page.pw, s[3][1][1]*page.ph, file=f)
                             print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
                             print("</stroke>", file=f)
-                        print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
-                        print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
-                        print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
-                        print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
-                        print("    ", s[3][0][0]*page.pw, s[3][1][1]*page.ph, file=f)
-                        print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
-                        print("</stroke>", file=f)
+                        if s[1].alpha > 0:
+                            print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
+                            print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
+                            print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
+                            print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
+                            print("    ", s[3][0][0]*page.pw, s[3][1][1]*page.ph, file=f)
+                            print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
+                            print("</stroke>", file=f)
                     if s[0] == 'text':
                         font = s[6].rsplit(' ', 1)
                         print(f"<text font=\"{font[0]}\" size=\"{font[1]}\" x=\"{s[3][0][0]*page.pw}\" y=\"{s[3][0][1]*page.ph}\" ts=\"0ll\" color=\"{color}\">{s[5]}</text>", file=f)
