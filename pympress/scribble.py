@@ -597,6 +597,8 @@ class Scribbler(builder.Builder):
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "line":
                 self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)]])
+                if button[1] == Gdk.BUTTON_SECONDARY:
+                    self.scribble_list[-1].append([])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "select_r":
                 self.select_rect[0] = list(point)
@@ -632,6 +634,19 @@ class Scribbler(builder.Builder):
             return self.track_scribble(point, button)
 
         elif e_type == Gdk.EventType.BUTTON_RELEASE:
+            if self.drawing_mode == "line" and len(self.scribble_list[-1]) == 6:
+                aspect = widget.get_allocated_width() / widget.get_allocated_height() if widget else 1
+                line = (self.scribble_list[-1][3][0][0] - self.scribble_list[-1][3][1][0], 
+                       (self.scribble_list[-1][3][0][1] - self.scribble_list[-1][3][1][1]) / aspect)
+                angle = math.atan2(line[1], line[0])
+                self.scribble_list[-1][3].append([
+                    self.scribble_list[-1][3][1][0] + 0.04 * math.cos(angle + math.pi/6),
+                    self.scribble_list[-1][3][1][1] + 0.04 * math.sin(angle + math.pi/6) * aspect])
+                self.scribble_list[-1][3].append([
+                    self.scribble_list[-1][3][1][0] + 0.04 * math.cos(angle - math.pi/6),
+                    self.scribble_list[-1][3][1][1] + 0.04 * math.sin(angle - math.pi/6) * aspect])
+                self.scribble_list[-1][3].append([
+                    self.scribble_list[-1][3][1][0], self.scribble_list[-1][3][1][1]])
             self.scribble_drawing = False
             if self.pen_pointer:
                 self.pen_pointer[0] = []
