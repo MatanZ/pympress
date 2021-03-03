@@ -45,6 +45,7 @@ import json
 import tempfile
 import mimetypes
 import webbrowser
+from xml.sax.saxutils import escape as xml_escape
 
 import gi
 gi.require_version('Poppler', '0.18')
@@ -779,14 +780,16 @@ class Document(object):
                 for s in self.scribbles[p]:
                     color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(s[1].red*255), int(s[1].green*255), int(s[1].blue*255), int(s[1].alpha*255))
                     if s[0] == 'segment' and len(s[3]) > 1:
-                        print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
+                        pen = "pen" if s[1].alpha == 1 else "highlighter"
+                        print(f"<stroke tool=\"{pen}\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
                         for i in s[3]:
                             print("    ", i[0]*page.pw, i[1]*page.ph, file=f)
                         print("</stroke>", file=f)
                     if s[0] == 'box':
                         if len(s) > 5 and s[5].alpha > 0:
                             fill_color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(s[5].red*255), int(s[5].green*255), int(s[5].blue*255), int(s[5].alpha*255))
-                            print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{fill_color}\" width=\"{s[2]}\" fill=\"{int(s[5].alpha*255)}\">", file=f)
+                            pen = "pen" if s[5].alpha == 1 else "highlighter"
+                            print(f"<stroke tool=\"{pen}\" ts=\"0ll\" fn=\"\" color=\"{fill_color}\" width=\"{s[2]}\" fill=\"{int(s[5].alpha*255)}\">", file=f)
                             print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
                             print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
                             print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
@@ -794,7 +797,8 @@ class Document(object):
                             print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
                             print("</stroke>", file=f)
                         if s[1].alpha > 0:
-                            print(f"<stroke tool=\"pen\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
+                            pen = "pen" if s[1].alpha == 1 else "highlighter"
+                            print(f"<stroke tool=\"{pen}\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
                             print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
                             print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
                             print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
@@ -803,7 +807,10 @@ class Document(object):
                             print("</stroke>", file=f)
                     if s[0] == 'text':
                         font = s[6].rsplit(' ', 1)
-                        print(f"<text font=\"{font[0]}\" size=\"{font[1]}\" x=\"{s[3][0][0]*page.pw}\" y=\"{s[3][0][1]*page.ph}\" ts=\"0ll\" color=\"{color}\">{s[5]}</text>", file=f)
+                        x = s[4][0][0]*page.pw
+                        y = s[3][0][1]*page.ph
+                        text = xml_escape(s[5])
+                        print(f"<text font=\"{font[0]}\" size=\"{font[1]}\" x=\"{x}\" y=\"{y}\" ts=\"0ll\" color=\"{color}\">{text}</text>", file=f)
             print("</layer>", file=f)
             print("</page>", file=f)
         print("</xournal>", file=f)
