@@ -321,6 +321,8 @@ class Scribbler(builder.Builder):
             pos = pos - 1
         elif val == Gdk.KEY_Right and pos < len(self.text_entry[5]):
             pos = pos + 1
+        elif val == Gdk.KEY_Delete and pos < len(self.text_entry[5]):
+            self.text_entry[5] = self.text_entry[5][:pos] + self.text_entry[5][pos + 1:]
         elif (31 < val < 65280 or val in (Gdk.KEY_Return, )) and s and not state & Gdk.ModifierType.CONTROL_MASK:
             self.text_entry[5] = self.text_entry[5][:pos] + s + self.text_entry[5][pos:]
             pos = pos + 1
