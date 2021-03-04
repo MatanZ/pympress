@@ -128,7 +128,7 @@ def __get_resource_list(*path_parts):
 
 
 def get_latex_dict():
-    """ Returns the path to the configuration file containing the defaults.
+    """ Returns the path to the file containing the typing shortcuts.
 
     Returns:
         str: The path to the portable configuration file.
@@ -163,22 +163,37 @@ def get_default_config():
     return __get_resource_path('share', 'defaults.conf')
 
 
+def get_personal_dict():
+    """ Returns the path to the file containing the personal shortcuts.
+
+    Returns:
+        str: The path to the portable configuration file.
+    """
+    base_dir, _ = get_user_config_dir()
+    fn = ('pympress.' if 'pympress' not in base_dir.lower() else '') + 'shortcuts.json'
+    return os.path.join(base_dir, fn)
+
+
 def get_user_config():
+    base_dir, fn = get_user_config_dir()
+    return os.path.join(base_dir, fn)
+
+
+def get_user_config_dir():
     """ Returns the path to the configuration file in the user config directory.
 
     Returns:
         `str`: path to the user configuration file.
     """
     if IS_WINDOWS:
-        base_dir = os.getenv('APPDATA')
+        return os.getenv('APPDATA'), 'pympress.ini'
     elif IS_MAC_OS:
-        base_dir = os.path.expanduser('~/Library/Preferences')
+        return os.path.expanduser('~/Library/Preferences'), 'pympress'
     else:
-        base_dir = os.getenv('XDG_CONFIG_HOME', os.path.expanduser('~/.config'))
+        base_dir = os.getenv('XDG_CONFIG_HOME', os.path.expanduser('~/.config/pympress'))
         if not os.path.isdir(base_dir):
             os.mkdir(base_dir)
-
-    return os.path.join(base_dir, 'pympress' + ('.ini' if IS_WINDOWS else ''))
+        return base_dir, 'settings.conf'
 
 
 def load_style_provider(style_provider):

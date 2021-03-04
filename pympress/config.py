@@ -116,7 +116,7 @@ class Config(configparser.ConfigParser, object):  # python 2 fix
         # migrate old configuration files from previously-used erroneous locations
         if search_legacy_locations and (util.IS_POSIX or util.IS_MAC_OS) and not os.path.exists(user_config):
             for legacy_location in [os.path.expanduser('~/.pympress'), os.path.expanduser('~/.config/pympress')]:
-                if os.path.exists(legacy_location):
+                if os.path.isfile(legacy_location):
                     shutil.move(legacy_location, user_config)
 
         return user_config

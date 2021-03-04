@@ -266,6 +266,10 @@ class UI(builder.Builder):
         self.vlines = self.config.getfloat('presenter', 'vertical_lines')
 
         self.scribbler.latex_dict = json.load(open(util.get_latex_dict()))
+        try:
+            self.scribbler.latex_dict.update(json.load(open(util.get_personal_dict())))
+        except FileNotFoundError:
+            pass
         keys = sorted(self.scribbler.latex_dict.keys())
         self.scribbler.latex_prefixes = {keys[x] for x in range(len(keys)-1) if keys[x+1].startswith(keys[x])}
 
