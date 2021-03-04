@@ -224,7 +224,7 @@ class Scribbler(builder.Builder):
         return False
 
     def evdev_callback_track(self, data):
-        self.toggle_scribble(*data, always=True)
+        self.toggle_scribble(None, *data, always=True)
         return False
 
     def nav_scribble(self, name, ctrl_pressed, command=None):
@@ -554,7 +554,7 @@ class Scribbler(builder.Builder):
         return False
 
 
-    def toggle_scribble(self, e_type, point, button, always=False, state=0):
+    def toggle_scribble(self, widget, e_type, point, button, always=False, state=0):
         """ Start/stop drawing scribbles.
 
         Args:

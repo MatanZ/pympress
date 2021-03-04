@@ -1339,7 +1339,7 @@ class UI(builder.Builder):
         """
         if self.zoom.toggle_zoom_target(widget, event):
             return True
-        elif self.scribbler.toggle_scribble(event.get_event_type(), self.zoom.get_slide_point(widget, event),
+        elif self.scribbler.toggle_scribble(widget, event.get_event_type(), self.zoom.get_slide_point(widget, event),
                                             event.get_button(), state=event.get_state()):
             return True
         elif self.laser.toggle_pointer(widget, event):
