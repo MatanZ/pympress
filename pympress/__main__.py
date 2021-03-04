@@ -145,7 +145,7 @@ def parse_opts(opts):
     ett = 0
     log_level = logging.ERROR
     notes_pos = None
-    highlight_mode = "clear"
+    highlight_mode = None
     config_override = {}
     debug = False
 

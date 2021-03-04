@@ -189,7 +189,10 @@ class UI(builder.Builder):
         super(UI, self).__init__()
         self.config.read_dict(config_override)
         self.blanked = self.config.getboolean('content', 'start_blanked')
-        self.highlight_mode = highlight_mode
+        if highlight_mode:
+            self.highlight_mode = highlight_mode
+        else:
+            self.highlight_mode = self.config.get('presenter', 'highlight_mode', fallback='clear')
 
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(),
