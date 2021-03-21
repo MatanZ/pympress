@@ -317,6 +317,20 @@ class Scribbler(builder.Builder):
             self.text_entry[5] = self.text_entry[5][:pos - 1] + self.text_entry[5][pos:]
             pos = pos - 1
             self.text_entry[4] = [[0, 0], [0, 0]]
+        elif val == Gdk.KEY_End:
+            if state & Gdk.ModifierType.CONTROL_MASK:
+                pos = len(self.text_entry[5])
+            else:
+                if pos > 0:
+                    i = self.text_entry[5].find('\r', pos)
+                    pos = len(self.text_entry[5]) if i == -1 else i
+        elif val == Gdk.KEY_Home:
+            if state & Gdk.ModifierType.CONTROL_MASK:
+                pos = 0
+            else:
+                if pos > 0:
+                    i = self.text_entry[5].rfind('\r', 0, pos)
+                    pos = i + 1
         elif val == Gdk.KEY_Left and pos > 0:
             pos = pos - 1
         elif val == Gdk.KEY_Right and pos < len(self.text_entry[5]):
