@@ -237,14 +237,8 @@ if __name__ == '__main__':
 
     options = {}
 
-    # subtle tweak: don’t put an install section in installed packages
     with open('README.md') as f:
         readme = f.readlines()
-
-        install_section = find_index_startstring(readme, '# Install')
-        next_section = find_index_startstring(readme, '# ', install_section + 1)
-        del readme[install_section:next_section]
-
         options['long_description'] = ''.join(readme)
 
 
