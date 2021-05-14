@@ -42,6 +42,7 @@ import os
 import math
 import enum
 import json
+import base64
 import tempfile
 import mimetypes
 import webbrowser
@@ -49,7 +50,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 import gi
 gi.require_version('Poppler', '0.18')
-from gi.repository import Poppler, Gdk
+from gi.repository import Poppler, Gdk, GdkPixbuf, GLib
 
 try:
     from urllib.parse import urljoin, scheme_chars
@@ -690,6 +691,9 @@ class Document(object):
                             scribble[1] = Gdk.RGBA(*scribble[1]['rgba'])
                             if scribble[0] in ['box', 'ellipse'] and len(scribble) > 5:
                                 scribble[5] = Gdk.RGBA(*scribble[5]['rgba'])
+                            if scribble[0] == 'image':
+                                data = GLib.Bytes(base64.b64decode(scribble[5]['pixels']))
+                                scribble[5] = GdkPixbuf.Pixbuf.new_from_bytes(data, *scribble[5]['params'])
                         self.scribbles[int(key.split('.')[0])] = scribble_list
             except OSError:
                 pass
@@ -736,6 +740,11 @@ class Document(object):
                 if isinstance(obj, Gdk.RGBA):
                     return {'rgba': (obj.red, obj.green, obj.blue, obj.alpha)}
                 # Let the base class default method raise the TypeError
+                elif isinstance(obj, GdkPixbuf.Pixbuf):
+                    return {'pixels': base64.b64encode(obj.get_pixels()).decode('ascii'),
+                        'params': (obj.get_colorspace(), obj.get_has_alpha(), obj.get_bits_per_sample(),
+                                   obj.get_width(), obj.get_height(), obj.get_rowstride())
+                        }
                 return json.JSONEncoder.default(self, obj)
         out_dict = {}
         if self.highlight_mode == "autopage":

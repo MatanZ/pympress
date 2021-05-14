@@ -29,6 +29,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import math
+import os
 
 import gi
 import cairo
@@ -380,11 +381,20 @@ class Scribbler(builder.Builder):
                 self.stamp_names.append(name)
                 stamp_str = self.config.get('stamps', name)
                 p = stamp_str.split(':')
-                if len(p) == 3:
+                if stamp_str.startswith('/') and os.path.isfile(stamp_str):
+                    self.stamps[name] = {
+                        'name': name,
+                        'type': 'image',
+                        'color': self.scribble_color,
+                    }
+                    self.stamps[name]['image'] = Gtk.Image().new_from_file(stamp_str)
+                    self.stamps[name]['pixbuf'] = self.stamps[name]['image'].get_pixbuf()
+                elif len(p) == 3:
                     color = Gdk.RGBA()
                     color.parse(p[0])
                     self.stamps[name] = {
                         'name': name,
+                        'type': 'text',
                         'color': color,
                         'font': p[1],
                         'str': p[2],
@@ -431,7 +441,9 @@ class Scribbler(builder.Builder):
         self.redraw_current_slide()
 
     def stamp_scribble(self, point):
-        if 'str' in self.stamp:
+        if self.stamp['type'] == 'image':
+            return ["image", self.stamp['color'], self.scribble_width, [point], [[0, 0], [0, 0]], self.stamp['pixbuf']]
+        elif self.stamp['type'] == 'text':
             return ["text", self.stamp['color'], self.scribble_width, [point], [[0, 0], [0, 0]],
                                       self.stamp['str'], self.stamp['font'], 0]
         return None
@@ -716,7 +728,7 @@ class Scribbler(builder.Builder):
                 for p in points[1:]:
                     cairo_context.line_to(*p)
                 cairo_context.stroke()
-            if stype == "box":
+            elif stype == "box":
                 points = [(p[0] * ww, p[1] * wh) for p in points]
                 fill_color = extra[0] if extra else color
                 x0, y0 = points[0]
@@ -731,7 +743,7 @@ class Scribbler(builder.Builder):
                 cairo_context.set_source_rgba(*color)
                 cairo_context.set_line_width(width)
                 cairo_context.stroke()
-            if stype == "ellipse":
+            elif stype == "ellipse":
                 points = [(p[0] * ww, p[1] * wh) for p in points]
                 fill_color = extra[0] if extra else color
                 x0, y0 = points[0]
@@ -748,8 +760,7 @@ class Scribbler(builder.Builder):
                 cairo_context.set_line_width(2 * width / min(abs(x1-x0), abs(y1-y0)))
                 cairo_context.stroke()
                 cairo_context.restore()
-
-            if stype == "text":
+            elif stype == "text":
                 layout = PangoCairo.create_layout(cairo_context)
                 PangoCairo.context_set_resolution(layout.get_context(), 72 * pixels_per_point)
                 font=extra[1]
@@ -813,6 +824,15 @@ class Scribbler(builder.Builder):
                     cairo_context.set_line_width(1)
                     cairo_context.set_dash([4,2])
                     cairo_context.stroke()
+            elif stype == "image":
+                pixbuf = extra[0]
+                w, h = pixbuf.get_width(), pixbuf.get_height()
+                x, y = int(points[0][0]*ww), int(points[0][1]*wh)
+                cairo_context.rectangle(x, y, w, h)
+                Gdk.cairo_set_source_pixbuf(cairo_context, pixbuf, x, y)
+                cairo_context.paint()
+                cairo_context.reset_clip()
+
         if widget is self.p_da_cur and self.select_rect[1]:
                 points = [(p[0] * ww, p[1] * wh) for p in self.select_rect]
                 x0, y0 = points[0]
