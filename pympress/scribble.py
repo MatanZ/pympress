@@ -641,7 +641,9 @@ class Scribbler(builder.Builder):
                     alignment = 1
                 else:
                     alignment = self.text_alignment
-                self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [list(point)], [[0, 0], [0, 0]], "", self.scribble_font, alignment])
+                p = list(point)
+                p[1] = p[1] - 0.01 # On my screen and default font size, 0.01 aligns the bottom of the cursor with the text's baseline.
+                self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [p], [[0, 0], [0, 0]], "", self.scribble_font, alignment])
                 self.text_entry = self.scribble_list[-1]
                 self.text_pos = len(self.text_entry[5])
                 self.add_undo(('a', self.scribble_list[-1]))
