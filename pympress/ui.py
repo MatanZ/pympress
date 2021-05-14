@@ -451,6 +451,7 @@ class UI(builder.Builder):
 
         color_button = Gtk.ColorButton.new_with_rgba(self.scribbler.scribble_color)
         color_button.connect("color-set", self.scribbler.update_color)
+        color_button.connect("button-press-event", self.color_button_mode)
         color_button.set_name("scribble_color")
         color_button.set_size_request(48,48)
         color_button.set_use_alpha(True)
@@ -484,6 +485,11 @@ class UI(builder.Builder):
             self.p_central.pack_start(toolbar, False, False, 1)
             self.p_central.reorder_child(toolbar, 0)
 
+    def color_button_mode(self, widget, event):
+        ctrl_pressed = event.get_state() & Gdk.ModifierType.CONTROL_MASK
+        shift_pressed = event.get_state() & Gdk.ModifierType.SHIFT_MASK
+        meta_pressed = event.get_state() & Gdk.ModifierType.MOD1_MASK
+        self.scribbler.set_color_fill = ctrl_pressed | shift_pressed
 
     def setup_screens(self):
         """ Sets up the position of the windows.

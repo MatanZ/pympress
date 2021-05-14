@@ -852,16 +852,22 @@ class Scribbler(builder.Builder):
             widget (:class:`~Gtk.ColorButton`):  the clicked button to trigger this event, if any
         """
         color = widget.get_rgba()
-        if self.selected:
+
+        if self.set_color_fill:
+            self.fill_color = color
+            widget.set_rgba(self.scribble_color)
+            return
+        elif self.selected:
             self.add_undo(('c', [[s, s[1], color] for s in self.selected]))
             for s in self.selected:
                 s[1] = color
+            widget.set_rgba(self.scribble_color)
+            return
         elif self.text_entry and self.scribble_list and self.scribble_list[-1][0] == "text":
             self.scribble_list[-1][1] = color
-        else:
-            self.scribble_color = color
-            self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
-            self.config.set('scribble', 'color', self.scribble_color.to_string())
+        self.scribble_color = color
+        self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
+        self.config.set('scribble', 'color', self.scribble_color.to_string())
 
     def update_alpha(self, widget, event, value):
         """ Callback for the alpha slider
