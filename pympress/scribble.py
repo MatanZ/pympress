@@ -955,70 +955,50 @@ class Scribbler(builder.Builder):
             opacity = 0.2 if b == button else 1
             self.buttons[b].set_opacity(opacity)
 
-    def enable_erase(self, *args):
-        self.drawing_mode = "erase"
-        self.show_button("erase")
-        self.selected = []
+    def enable_tool(self, tool, *args):
+        pointer_dict = {
+            "erase": Gdk.CursorType.CENTER_PTR,
+            "draw": Gdk.CursorType.PENCIL,
+            "box": Gdk.CursorType.DOTBOX,
+            "line": Gdk.CursorType.DRAFT_SMALL,
+            "text":  Gdk.CursorType.XTERM,
+            "stamp": Gdk.CursorType.BLANK_CURSOR,
+            "select_t": Gdk.CursorType.HAND1,
+        }
+        self.drawing_mode = tool
+        self.show_button(tool)
+        if tool != "select_t":
+            self.selected = []
         self.select_rect = [[],[]]
-        self.text_entry = False
-        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.CENTER_PTR).get_image()
+        if tool != "text":
+            self.text_entry = False 
+        self.pen_pointer_p = Gdk.Cursor(pointer_dict[tool]).get_image()
         return True
+
+    def enable_erase(self, *args):
+        return self.enable_tool("erase")
 
     def enable_draw(self, *args):
-        self.drawing_mode = "draw"
-        self.show_button("draw")
-        self.selected = []
-        self.select_rect = [[],[]]
-        self.text_entry = False
-        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.PENCIL).get_image()
-        return True
+        return self.enable_tool("draw")
 
     def enable_box(self, *args):
-        self.drawing_mode = "box"
-        self.show_button("box")
-        self.selected = []
-        self.select_rect = [[],[]]
-        self.text_entry = False
-        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.DOTBOX).get_image()
-        return True
+        return self.enable_tool("box")
 
     def enable_line(self, *args):
-        self.drawing_mode = "line"
-        self.show_button("line")
-        self.selected = []
-        self.select_rect = [[],[]]
-        self.text_entry = False
-        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.DRAFT_SMALL).get_image()
-        return True
+        return self.enable_tool("line")
 
     def enable_text(self, *args):
-        self.drawing_mode = "text"
-        self.show_button("text")
-        self.selected = []
-        self.select_rect = [[],[]]
-        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.XTERM).get_image()
-        return True
+        return self.enable_tool("text")
 
     def enable_stamp(self, *args):
         if not self.stamps:
             return True
-        self.drawing_mode = "stamp"
         if not self.stamp:
             self.set_stamp()
-        self.show_button("stamp")
-        self.selected = []
-        self.select_rect = [[],[]]
-        self.text_entry = False
-        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.BLANK_CURSOR).get_image()
-        return True
+        return self.enable_tool("stamp")
 
     def enable_select_touch(self, *args):
-        self.drawing_mode = "select_t"
-        self.show_button("select_t")
-        self.select_rect = [[],[]]
-        self.text_entry = False
-        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.HAND1).get_image()
-        return True
+        return self.enable_tool("select_t")
 
     def enable_select_rect(self, *args):
         self.drawing_mode = "select_r"
