@@ -688,7 +688,7 @@ class Document(object):
                         self.scribbles[int(key.split('.')[0])] = []
                         for scribble in scribble_list:
                             scribble[1] = Gdk.RGBA(*scribble[1]['rgba'])
-                            if scribble[0] == 'box' and len(scribble) > 5:
+                            if scribble[0] in ['box', 'ellipse'] and len(scribble) > 5:
                                 scribble[5] = Gdk.RGBA(*scribble[5]['rgba'])
                         self.scribbles[int(key.split('.')[0])] = scribble_list
             except OSError:

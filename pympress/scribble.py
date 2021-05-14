@@ -73,7 +73,7 @@ def intersects(p0, p1, scribble):
         for i in range(len(scribble[3]) - 1):
             if segments_intersect(p1, p0, scribble[3][i], scribble[3][i + 1]):
                 return True
-    elif scribble[0] in ("box", "text"):
+    elif scribble[0] in ("box", "text", "ellipse"):
         if min(scribble[4][0][0], scribble[4][1][0]) <= p1[0] <= \
            max(scribble[4][0][0], scribble[4][1][0]) and \
            min(scribble[4][0][1], scribble[4][1][1]) <= p1[1] <= \
@@ -88,7 +88,7 @@ def adjust_points(pts_l, dx, dy):
 def adjust_scribbles(scribbles, dx, dy):
     for s in scribbles:
         adjust_points(s[3], dx, dy)
-        if s[0] in ("segment", "box", "text"):
+        if s[0] in ("segment", "box", "text", "ellipse"):
             adjust_points(s[4], dx, dy)
 
 class Scribbler(builder.Builder):
@@ -252,6 +252,8 @@ class Scribbler(builder.Builder):
             self.enable_draw()
         elif command == 'erase':
             self.enable_erase()
+        elif command == 'ellipse':
+            self.enable_ellipse()
         elif command == 'box':
             self.enable_box()
         elif command == 'line':
@@ -515,7 +517,7 @@ class Scribbler(builder.Builder):
                         self.scribble_list.remove(scribble)
                 self.last_del_point = point
                 self.redraw_current_slide()
-            elif self.drawing_mode in ("box", "line"):
+            elif self.drawing_mode in ("box", "line", "ellipse"):
                 self.scribble_list[-1][3][1] = point
                 add_point_rect_ordered(point, self.scribble_list[-1][4])
                 self.redraw_current_slide()
@@ -542,7 +544,7 @@ class Scribbler(builder.Builder):
                                 self.select_rect[0][1] <= p[1] <= self.select_rect[1][1]):
                                 self.selected.append(scribble)
                                 break
-                    if scribble[0] in ("box", "text"):
+                    if scribble[0] in ("box", "text", "ellipse"):
                         for p in scribble[4]:
                             if (self.select_rect[1][0] <= p[0] <= self.select_rect[0][0] or
                                 self.select_rect[0][0] <= p[0] <= self.select_rect[1][0]) and (
@@ -609,6 +611,11 @@ class Scribbler(builder.Builder):
                 fill_color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_SECONDARY else self.fill_color
                 color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_MIDDLE else self.scribble_color
                 self.scribble_list.append(["box", color, self.scribble_width, [point, point], [list(point), list(point)], fill_color])
+                self.add_undo(('a', self.scribble_list[-1]))
+            elif self.drawing_mode == "ellipse":
+                fill_color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_SECONDARY else self.fill_color
+                color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_MIDDLE else self.scribble_color
+                self.scribble_list.append(["ellipse", color, self.scribble_width, [point, point], [list(point), list(point)], fill_color])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "line":
                 self.scribble_list.append(["segment", self.scribble_color, self.scribble_width, [point, point], [list(point), list(point)]])
@@ -722,6 +729,24 @@ class Scribbler(builder.Builder):
                 cairo_context.set_source_rgba(*color)
                 cairo_context.set_line_width(width)
                 cairo_context.stroke()
+            if stype == "ellipse":
+                points = [(p[0] * ww, p[1] * wh) for p in points]
+                fill_color = extra[0] if extra else color
+                x0, y0 = points[0]
+                x1, y1 = points[1]
+                if x1 == x0 or y1 == y0:
+                    continue
+                cairo_context.save()
+                cairo_context.translate((x1+x0)/2, (y1+y0)/2)
+                cairo_context.scale((x1-x0)/2, (y1-y0)/2)
+                cairo_context.arc(0, 0, 1, 0, 2*math.pi)
+                cairo_context.set_source_rgba(*fill_color)
+                cairo_context.fill_preserve()
+                cairo_context.set_source_rgba(*color)
+                cairo_context.set_line_width(2 * width / min(abs(x1-x0), abs(y1-y0)))
+                cairo_context.stroke()
+                cairo_context.restore()
+
             if stype == "text":
                 layout = PangoCairo.create_layout(cairo_context)
                 PangoCairo.context_set_resolution(layout.get_context(), 72 * pixels_per_point)
@@ -963,6 +988,7 @@ class Scribbler(builder.Builder):
             "box": Gdk.CursorType.DOTBOX,
             "line": Gdk.CursorType.DRAFT_SMALL,
             "text":  Gdk.CursorType.XTERM,
+            "ellipse": Gdk.CursorType.CIRCLE,
             "stamp": Gdk.CursorType.BLANK_CURSOR,
             "select_t": Gdk.CursorType.HAND1,
         }
@@ -981,6 +1007,9 @@ class Scribbler(builder.Builder):
 
     def enable_draw(self, *args):
         return self.enable_tool("draw")
+
+    def enable_ellipse(self, *args):
+        return self.enable_tool("ellipse")
 
     def enable_box(self, *args):
         return self.enable_tool("box")
@@ -1009,7 +1038,7 @@ class Scribbler(builder.Builder):
         return True
 
     def next_tool(self, *args):
-        tools = [None, "draw", "erase", "line", "box", "text", "stamp"]
+        tools = [None, "draw", "erase", "line", "box", "text", "stamp", "ellipse"]
         try:
             i = (tools.index(self.drawing_mode) + 1) % len(tools)
         except ValueError:
