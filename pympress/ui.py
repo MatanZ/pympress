@@ -453,6 +453,7 @@ class UI(builder.Builder):
         color_button.connect("color-set", self.scribbler.update_color)
         color_button.set_name("scribble_color")
         color_button.set_size_request(48,48)
+        color_button.set_use_alpha(True)
         toolbar_color_button = Gtk.ToolItem.new()
         toolbar_color_button.add(color_button)
         toolbar.insert(toolbar_color_button, 999)
