@@ -759,6 +759,8 @@ class UI(builder.Builder):
             self.talk_time.reset_timer()
 
         self.on_page_change(False, reloading=reloading)
+        page_type = self.notes_mode.complement()
+        self.c_frame.set_property("ratio", self.doc.current_page().get_aspect_ratio(page_type))
 
 
     def reload_document(self):

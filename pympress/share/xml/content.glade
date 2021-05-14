@@ -2,8 +2,6 @@
 <interface>
   <!-- interface-requires gtk+ 3.2 -->
   <object class="GtkWindow" id="c_win">
-    <property name="width_request">1067</property>
-    <property name="height_request">600</property>
     <property name="can_focus">True</property>
     <property name="events">GDK_KEY_PRESS_MASK | GDK_STRUCTURE_MASK | GDK_SCROLL_MASK</property>
     <property name="title" translatable="yes">Pympress Content</property>
