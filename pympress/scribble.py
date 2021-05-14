@@ -366,7 +366,8 @@ class Scribbler(builder.Builder):
                             pass
             self.text_entry[4] = [[0, 0], [0, 0]]
         else:
-            logger.debug(f"unknown key, {val=}, {s=}, name={Gdk.keyval_name(val)}")
+            #logger.debug(f"unknown key, {val=}, {s=}, name={Gdk.keyval_name(val)}")
+            pass
         self.redraw_current_slide()
         self.text_pos = pos
         return True
@@ -1023,7 +1024,7 @@ class Scribbler(builder.Builder):
         if self.selected:
             self.drawing_mode = "move"
             self.show_button("move")
-            self.select_rect = [self.selected[0][3][0][:],self.selected[0][3][0][:]]
+            self.select_rect = [list(self.selected[0][3][0]),list(self.selected[0][3][0])]
             for i in self.selected:
                 pts = i[4]
                 for p in pts:
