@@ -672,7 +672,7 @@ class Scribbler(builder.Builder):
         elif e_type == Gdk.EventType.BUTTON_RELEASE:
             if self.drawing_mode == "line" and len(self.scribble_list[-1]) == 6:
                 aspect = widget.get_allocated_width() / widget.get_allocated_height() if widget else 1
-                line = (self.scribble_list[-1][3][0][0] - self.scribble_list[-1][3][1][0], 
+                line = (self.scribble_list[-1][3][0][0] - self.scribble_list[-1][3][1][0],
                        (self.scribble_list[-1][3][0][1] - self.scribble_list[-1][3][1][1]) / aspect)
                 angle = math.atan2(line[1], line[0])
                 self.scribble_list[-1][3].append([
@@ -1026,7 +1026,7 @@ class Scribbler(builder.Builder):
             self.selected = []
         self.select_rect = [[],[]]
         if tool != "text":
-            self.text_entry = False 
+            self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(pointer_dict[tool]).get_image()
         return True
 
