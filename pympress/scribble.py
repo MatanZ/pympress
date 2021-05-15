@@ -826,12 +826,20 @@ class Scribbler(builder.Builder):
                     cairo_context.stroke()
             elif stype == "image":
                 pixbuf = extra[0]
+                if rect != [[0, 0], [0, 0]] and widget is self.p_da_cur:
+                    w = int((rect[1][0] - rect[0][0]) * ww)
+                    h = int((rect[1][1] - rect[0][1]) * wh)
+                    pixbuf = pixbuf.scale_simple(w, h, GdkPixbuf.InterpType.BILINEAR)
                 w, h = pixbuf.get_width(), pixbuf.get_height()
                 x, y = int(points[0][0]*ww), int(points[0][1]*wh)
                 cairo_context.rectangle(x, y, w, h)
                 Gdk.cairo_set_source_pixbuf(cairo_context, pixbuf, x, y)
                 cairo_context.paint()
                 cairo_context.reset_clip()
+                cairo_context.new_path()
+                if rect == [[0, 0], [0, 0]] and widget is self.c_da:
+                    rect[0] = [ points[0][0], points[0][1] ]
+                    rect[1] = [ rect[0][0] + w/ww, rect[0][1] + h/wh ]
 
         if widget is self.p_da_cur and self.select_rect[1]:
                 points = [(p[0] * ww, p[1] * wh) for p in self.select_rect]
