@@ -74,7 +74,7 @@ def intersects(p0, p1, scribble):
         for i in range(len(scribble[3]) - 1):
             if segments_intersect(p1, p0, scribble[3][i], scribble[3][i + 1]):
                 return True
-    elif scribble[0] in ("box", "text", "ellipse"):
+    elif scribble[0] in ("box", "text", "ellipse", "image"):
         if min(scribble[4][0][0], scribble[4][1][0]) <= p1[0] <= \
            max(scribble[4][0][0], scribble[4][1][0]) and \
            min(scribble[4][0][1], scribble[4][1][1]) <= p1[1] <= \
