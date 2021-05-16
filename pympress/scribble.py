@@ -683,6 +683,9 @@ class Scribbler(builder.Builder):
                     self.scribble_list[-1][3][1][1] + 0.04 * math.sin(angle - math.pi/6) * aspect])
                 self.scribble_list[-1][3].append([
                     self.scribble_list[-1][3][1][0], self.scribble_list[-1][3][1][1]])
+            if self.drawing_mode in ["box", "ellipse"]:
+                self.scribble_list[-1][4] = [x[:] for x in self.scribble_list[-1][3]] 
+
             self.scribble_drawing = False
             if self.pen_pointer:
                 self.pen_pointer[0] = []
