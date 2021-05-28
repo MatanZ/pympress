@@ -662,6 +662,8 @@ class Document(object):
         self.page_change               = builder.get_callback_handler('on_page_change')
         self.start_editing_page_number = builder.get_callback_handler('page_number.start_editing')
 
+        self.scribbler = builder.scribbler
+
         # Setup PDF file
         self.path = path
         self.doc = pop_doc
