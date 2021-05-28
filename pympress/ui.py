@@ -501,7 +501,7 @@ class UI(builder.Builder):
         toolbar.insert(toolbar_alpha_scale, 999)
         self.scribbler.buttons["scribble_alpha"] = alpha_scale
 
-        color_button = Gtk.ColorButton.new_with_rgba(self.scribbler.scribble_color)
+        color_button = Gtk.ColorButton.new_with_rgba(Gdk.RGBA(*self.scribbler.scribble_color))
         color_button.connect("color-set", self.scribbler.update_color)
         color_button.set_name("scribble_color")
         color_button.set_size_request(48,48)
@@ -527,7 +527,7 @@ class UI(builder.Builder):
         toolbar.insert(toolbar_fill_alpha_scale, 999)
         self.scribbler.buttons["fill_alpha"] = fill_alpha_scale
 
-        fill_color_button = Gtk.ColorButton.new_with_rgba(self.scribbler.fill_color)
+        fill_color_button = Gtk.ColorButton.new_with_rgba(Gdk.RGBA(*self.scribbler.fill_color))
         fill_color_button.connect("color-set", self.scribbler.update_fill_color)
         fill_color_button.set_name("fill_color")
         fill_color_button.set_size_request(48,48)
@@ -537,9 +537,8 @@ class UI(builder.Builder):
         toolbar.insert(toolbar_fill_color_button, 999)
         self.scribbler.buttons["fill_color_button"] = fill_color_button
 
-
-        alpha_scale.set_value(self.scribbler.scribble_color.alpha)
-        fill_alpha_scale.set_value(self.scribbler.fill_color.alpha)
+        alpha_scale.set_value(self.scribbler.scribble_color[3])
+        fill_alpha_scale.set_value(self.scribbler.fill_color[3])
         width_scale.set_value(self.scribbler.width_curve_r(self.scribbler.scribble_width))
 
     def setup_screens(self):

@@ -106,6 +106,8 @@ def is_text(scribble):
     except:
         return False
 
+def rgba_to_tuple(obj):
+    return (obj.red, obj.green, obj.blue, obj.alpha)
 
 class Scribbler(builder.Builder):
     """ UI that allows to draw free-hand on top of the current slide.
@@ -115,16 +117,16 @@ class Scribbler(builder.Builder):
         builder (:class:`~pympress.builder.Builder`): A builder from which to load widgets
         notes_mode (`bool`): The current notes mode, i.e. whether we display the notes on second slide
     """
-    #: `list` of scribbles to be drawn, as tuples of color :class:`~Gdk.RGBA`, width `int`, and a `list` of points.
+    #: `list` of scribbles to be drawn, as tuples of type `string`, color `tuple`, width `int`, and a `list` of points.
     scribble_list = []
     #: Whether the current mouse movements are drawing strokes or should be ignored
     scribble_drawing = False
-    #: :class:`~Gdk.RGBA` current color of the scribbling tool
-    scribble_color = Gdk.RGBA()
+    #: `tuple` current color of the scribbling tool
+    scribble_color = (0,0,0,0)
     #: `int` current stroke width of the scribbling tool
     scribble_width = 1
-    #: :class:`~Gdk.RGBA` current fill color of the scribbling tool
-    fill_color = Gdk.RGBA()
+    #: :class:`tuple` current fill color of the scribbling tool
+    fill_color = (0,0,0,0)
 
     #: :class:`~Gtk.EventBox` for the scribbling in the Content window, captures freehand drawing
     scribble_c_eb = None
@@ -212,10 +214,12 @@ class Scribbler(builder.Builder):
 
         self.connect_signals(self)
 
-        self.scribble_color = Gdk.RGBA()
-        self.scribble_color.parse(config.get('scribble', 'color'))
+        color = Gdk.RGBA()
+        color.parse(config.get('scribble', 'color'))
+        self.scribble_color = rgba_to_tuple(color)
         self.scribble_width = config.getfloat('scribble', 'width')
-        self.fill_color.parse(config.get('scribble', 'fill_color'))
+        color.parse(config.get('scribble', 'fill_color'))
+        self.fill_color = rgba_to_tuple(color)
 
         self.config = config
 
@@ -237,13 +241,13 @@ class Scribbler(builder.Builder):
             \\usepackage{amsmath,amsfonts,xcolor}
             \\begin{document}
             \\color[rgb]{%f,%f,%f}
-        """ % (color.red, color.green, color.blue)
+        """ % (color[0], color[1], color[2])
         fn = "/tmp/ppl.png"
         try:
             #buf = io.BytesIO()
             #sympy.preview(text, output='png', viewer='BytesIO', outputbuffer=buf,
             #              dvioptions=["-T", "tight", "-z", "0", "--truecolor", "-D " + str(size)])
-            sympy.preview("\\color[rgb]{%f,%f,%f}\n%s" % (color.red, color.green, color.blue, text),
+            sympy.preview("\\color[rgb]{%f,%f,%f}\n%s" % (color[0], color[1], color[2], text),
                           output='png', viewer="file", filename=fn, euler=False,
                           preamble=preamble,
                           dvioptions=["-T", "tight", "-z", "0", "--truecolor", "-D " + str(size)])
@@ -251,7 +255,7 @@ class Scribbler(builder.Builder):
                 buf = open(fn,"rb").read()
             else:
                 buf = GdkPixbuf.Pixbuf.new_from_file(fn)
-        except:
+        except Exception as e:
             return None
         return buf
 
@@ -318,7 +322,7 @@ class Scribbler(builder.Builder):
         elif command == 'pen':
             self.set_pen(name)
         elif command == 'fill_copy':
-            self.fill_color = self.scribble_color.copy()
+            self.fill_color = self.scribble_color
         elif command == 'move':
             self.enable_move()
         elif command == 'del_selected':
@@ -521,12 +525,13 @@ class Scribbler(builder.Builder):
             self.scrible_width = 1.0
         else:
             self.scribble_width = float(p[1])
-        self.scribble_color = Gdk.RGBA()
+        color = Gdk.RGBA()
         if p[0].strip():
-            self.scribble_color.parse(p[0])
-        self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
+            color.parse(p[0])
+            self.scribble_color = rgba_to_tuple(color)
+        self.buttons["scribble_alpha"].set_value(color.alpha)
         self.buttons["scribble_width"].set_value(self.width_curve_r(self.scribble_width))
-        self.buttons["color_button"].set_rgba(self.scribble_color)
+        self.buttons["color_button"].set_rgba(color)
         try:
             pen_num = int(name)
         except ValueError:
@@ -689,13 +694,13 @@ class Scribbler(builder.Builder):
                 self.last_del_point = None
                 self.stroke_selected = []
             elif self.drawing_mode == "box":
-                fill_color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_SECONDARY else self.fill_color
-                color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_MIDDLE else self.scribble_color
+                fill_color = (0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_SECONDARY else self.fill_color
+                color = (0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_MIDDLE else self.scribble_color
                 self.scribble_list.append(["box", color, self.scribble_width, [point, point], [list(point), list(point)], fill_color])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "ellipse":
-                fill_color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_SECONDARY else self.fill_color
-                color = Gdk.RGBA(0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_MIDDLE else self.scribble_color
+                fill_color = (0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_SECONDARY else self.fill_color
+                color = (0.0, 0.0, 0.0, 0.0) if button[1] == Gdk.BUTTON_MIDDLE else self.scribble_color
                 self.scribble_list.append(["ellipse", color, self.scribble_width, [point, point], [list(point), list(point)], fill_color])
                 self.add_undo(('a', self.scribble_list[-1]))
             elif self.drawing_mode == "line":
@@ -846,7 +851,7 @@ class Scribbler(builder.Builder):
                 PangoCairo.context_set_resolution(layout.get_context(), 72 * pixels_per_point)
                 font = extra[1] if stype == "text" else "Roboto Mono Bold 12"
                 layout.set_font_description(Pango.FontDescription(font))
-                if self.text_entry == scribble and widget is self.c_da:
+                if self.text_entry is scribble and widget is self.c_da:
                     # Don't show tex shortcut
                     i = extra[0].rfind('\\', 0, -1)
                     if i > -1 and (i == len(extra[0]) - 1 or (i < len(extra[0]) - 1 and extra[0][i+1].isalnum())):
@@ -983,16 +988,16 @@ class Scribbler(builder.Builder):
             self.add_undo(('c', [[s, s[1], color] for s in self.selected]))
             for s in self.selected:
                 s[1] = color
-            widget.set_rgba(self.scribble_color)
+            widget.set_rgba(Gdk.RGBA(*self.scribble_color))
             return
         elif self.text_entry and self.scribble_list and self.scribble_list[-1][0] in ["text", "latex"]:
             self.scribble_list[-1][1] = color
             self.scribble_list[-1][6] = None
             self.scribble_list[-1][7] = ''
 
-        self.scribble_color = color
-        self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
-        self.config.set('scribble', 'color', self.scribble_color.to_string())
+        self.scribble_color = rgba_to_tuple(color)
+        self.buttons["scribble_alpha"].set_value(color.alpha)
+        self.config.set('scribble', 'color', color.to_string())
 
     def update_fill_color(self, widget):
         """ Callback for the color chooser button, to set scribbling color.
@@ -1009,9 +1014,9 @@ class Scribbler(builder.Builder):
                     s[5] = color
             widget.set_rgba(self.fill_color)
             return
-        self.fill_color = color
-        self.buttons["fill_alpha"].set_value(self.fill_color.alpha)
-        self.config.set('scribble', 'fill_color', self.fill_color.to_string())
+        self.fill_color = rgba_to_tuple(color)
+        self.buttons["fill_alpha"].set_value(color.alpha)
+        self.config.set('scribble', 'fill_color', color.to_string())
 
     def update_alpha(self, widget, event, value):
         """ Callback for the alpha slider
@@ -1023,15 +1028,15 @@ class Scribbler(builder.Builder):
         """
         # It seems that values returned are not necessarily in range
         alpha = min(max(0, int(value * 100) / 100), 1)
-        rgba = Gdk.RGBA(self.scribble_color.red, self.scribble_color.green, self.scribble_color.blue, alpha)
+        rgba = Gdk.RGBA(self.scribble_color[0], self.scribble_color[1], self.scribble_color[2], alpha)
         if self.selected:
             self.add_undo(('p', [[s, s[1].alpha, alpha] for s in self.selected]), True)
             for s in self.selected:
-                s[1] = Gdk.RGBA(s[1].red, s[1].green, s[1].blue, alpha)
+                s[1] = (s[1][0], s[1][1], s[1][2], alpha)
         else:
-            self.scribble_color = rgba
+            self.scribble_color = rgba_to_tuple(rgba)
             self.buttons["color_button"].set_rgba(rgba)
-            self.config.set('scribble', 'rgba', self.scribble_color.to_string())
+            self.config.set('scribble', 'rgba', rgba.to_string())
 
     def update_fill_alpha(self, widget, event, value):
         """ Callback for the fill alpha slider
@@ -1043,17 +1048,17 @@ class Scribbler(builder.Builder):
         """
         # It seems that values returned are not necessarily in range
         alpha = min(max(0, int(value * 100) / 100), 1)
-        rgba = Gdk.RGBA(self.fill_color.red, self.fill_color.green, self.fill_color.blue, alpha)
+        rgba = Gdk.RGBA(self.fill_color[0], self.fill_color[1], self.fill_color[2], alpha)
         if self.selected:
             selected = [x for x in self.selected if has_fill(x)]
             if selected:
                 self.add_undo(('pf', [[s, s[5].alpha, alpha] for s in selected]), True)
                 for s in selected:
-                    s[5] = Gdk.RGBA(s[5].red, s[5].green, s[5].blue, alpha)
+                    s[5] = (s[5][0], s[5][1], s[5][2], alpha)
         else:
-            self.fill_color = rgba
+            self.fill_color = rgba_to_tuple(rgba)
             self.buttons["fill_color_button"].set_rgba(rgba)
-            self.config.set('scribble', 'rgba', self.scribble_color.to_string())
+            self.config.set('scribble', 'rgba', rgba.to_string())
 
     def update_width(self, widget, event, value):
         """ Callback for the width chooser slider, to set scribbling width.

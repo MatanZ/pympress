@@ -609,7 +609,7 @@ class Page(object):
         return True
 
 def xopp_box_ellipse(s, page, f):
-    pen = "pen" if s[5].alpha == 1 else "highlighter"
+    pen = "pen" if s[5][3] == 1 else "highlighter"
     if s[0] == "box":
         print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
         print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
@@ -706,9 +706,10 @@ class Document(object):
                     for key, scribble_list in scribbles.items():
                         self.scribbles[int(key.split('.')[0])] = []
                         for scribble in scribble_list:
-                            scribble[1] = Gdk.RGBA(*scribble[1]['rgba'])
-                            if scribble[0] in ['box', 'ellipse'] and len(scribble) > 5:
-                                scribble[5] = Gdk.RGBA(*scribble[5]['rgba'])
+                            if 'rgba' in scribble[1]:
+                                scribble[1] = tuple(scribble[1]['rgba'])
+                            if scribble[0] in ['box', 'ellipse'] and len(scribble) > 5 and 'rgba' in scribble[5]:
+                                scribble[5] = tuple(scribble[5]['rgba'])
                             if scribble[0] in ['image', 'latex']:
                                 pp = 5 if scribble[0] == 'image' else 6
                                 try:
@@ -814,21 +815,21 @@ class Document(object):
             print("<layer>", file=f)
             if p in self.scribbles:
                 for s in self.scribbles[p]:
-                    color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(s[1].red*255), int(s[1].green*255), int(s[1].blue*255), int(s[1].alpha*255))
+                    color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(s[1][0]*255), int(s[1][1]*255), int(s[1][2]*255), int(s[1][3]*255))
                     if s[0] == 'segment' and len(s[3]) > 1:
-                        pen = "pen" if s[1].alpha == 1 else "highlighter"
+                        pen = "pen" if s[1][3] == 1 else "highlighter"
                         print(f"<stroke tool=\"{pen}\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
                         for i in s[3]:
                             print("    ", i[0]*page.pw, i[1]*page.ph, file=f)
                         print("</stroke>", file=f)
                     if s[0] in ['box', "ellipse"]:
-                        if len(s) > 5 and s[5].alpha > 0:
-                            fill_color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(s[5].red*255), int(s[5].green*255), int(s[5].blue*255), int(s[5].alpha*255))
-                            pen = "pen" if s[1].alpha == 1 else "highlighter"
-                            print(f"<stroke tool=\"{pen}\" ts=\"0ll\" fn=\"\" color=\"{fill_color}\" width=\"{s[2]}\" fill=\"{int(s[5].alpha*255)}\">", file=f)
+                        if len(s) > 5 and s[5][3] > 0:
+                            fill_color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(s[5][0]*255), int(s[5][1]*255), int(s[5][2]*255), int(s[5][3]*255))
+                            pen = "pen" if s[1][3] == 1 else "highlighter"
+                            print(f"<stroke tool=\"{pen}\" ts=\"0ll\" fn=\"\" color=\"{fill_color}\" width=\"{s[2]}\" fill=\"{int(s[5][3]*255)}\">", file=f)
                             xopp_box_ellipse(s, page, f)
-                        if s[1].alpha > 0:
-                            pen = "pen" if s[1].alpha == 1 else "highlighter"
+                        if s[1][3] > 0:
+                            pen = "pen" if s[1][3] == 1 else "highlighter"
                             print(f"<stroke tool=\"{pen}\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
                             xopp_box_ellipse(s, page, f)
                     if s[0] == 'text' and s[5]:
