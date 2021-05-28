@@ -987,6 +987,9 @@ class Scribbler(builder.Builder):
             return
         elif self.text_entry and self.scribble_list and self.scribble_list[-1][0] in ["text", "latex"]:
             self.scribble_list[-1][1] = color
+            self.scribble_list[-1][6] = None
+            self.scribble_list[-1][7] = ''
+
         self.scribble_color = color
         self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
         self.config.set('scribble', 'color', self.scribble_color.to_string())
