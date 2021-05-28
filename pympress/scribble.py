@@ -1212,7 +1212,7 @@ class Scribbler(builder.Builder):
         return True
 
     def next_tool(self, *args):
-        tools = [None, "draw", "erase", "line", "box", "text", "stamp", "ellipse"]
+        tools = [None, "draw", "erase", "line", "box", "ellipse", "text", "latex", "stamp"]
         try:
             i = (tools.index(self.drawing_mode) + 1) % len(tools)
         except ValueError:
