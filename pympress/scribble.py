@@ -1139,7 +1139,7 @@ class Scribbler(builder.Builder):
         self.text_entry = False
         self.select_rect = [[],[]]
         self.show_button("")
-        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.X_CURSOR).get_image()
+        self.pen_pointer_p = Gdk.Cursor.new_for_display(Gdk.Display.get_default(), Gdk.CursorType.X_CURSOR).get_image()
 
         self.redraw_current_slide()
         extras.Cursor.set_cursor(self.p_central)
@@ -1170,7 +1170,7 @@ class Scribbler(builder.Builder):
         self.select_rect = [[],[]]
         if tool not in ["text", "latex"]:
             self.text_entry = False
-        self.pen_pointer_p = Gdk.Cursor(pointer_dict[tool]).get_image()
+        self.pen_pointer_p = Gdk.Cursor.new_for_display(Gdk.Display.get_default(), pointer_dict[tool]).get_image()
         return True
 
     def enable_erase(self, *args):
