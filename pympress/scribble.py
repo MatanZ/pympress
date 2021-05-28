@@ -92,6 +92,12 @@ def adjust_scribbles(scribbles, dx, dy):
         if s[0] in ("segment", "box", "text", "ellipse"):
             adjust_points(s[4], dx, dy)
 
+def has_fill(scribble):
+    try:
+        return scribble[0] in ["box", "ellipse"]
+    except:
+        return False
+
 class Scribbler(builder.Builder):
     """ UI that allows to draw free-hand on top of the current slide.
 
@@ -754,13 +760,16 @@ class Scribbler(builder.Builder):
                 if x1 == x0 or y1 == y0:
                     continue
                 cairo_context.save()
+                mat = cairo_context.get_matrix()
                 cairo_context.translate((x1+x0)/2, (y1+y0)/2)
                 cairo_context.scale((x1-x0)/2, (y1-y0)/2)
                 cairo_context.arc(0, 0, 1, 0, 2*math.pi)
                 cairo_context.set_source_rgba(*fill_color)
                 cairo_context.fill_preserve()
                 cairo_context.set_source_rgba(*color)
+                cairo_context.set_matrix(mat)
                 cairo_context.set_line_width(2 * width / min(abs(x1-x0), abs(y1-y0)))
+                cairo_context.set_line_width(width)
                 cairo_context.stroke()
                 cairo_context.restore()
             elif stype == "text":

@@ -608,7 +608,23 @@ class Page(object):
         """
         return True
 
-
+def xopp_box_ellipse(s, page, f):
+    pen = "pen" if s[5].alpha == 1 else "highlighter"
+    if s[0] == "box":
+        print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
+        print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
+        print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
+        print("    ", s[3][0][0]*page.pw, s[3][1][1]*page.ph, file=f)
+        print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
+    elif s[0] == "ellipse":
+        steps = 720
+        ry = (s[3][1][1]-s[3][0][1]) * page.ph / 2
+        rx = (s[3][1][0]-s[3][0][0]) * page.pw / 2
+        cy = (s[3][1][1]+s[3][0][1]) * page.ph / 2
+        cx = (s[3][1][0]+s[3][0][0]) * page.pw / 2
+        for i in range(steps):
+            print("    ", cx + math.cos(i/steps * math.pi * 2) * rx, cy + math.sin(i/steps * math.pi * 2) * ry, file=f)
+    print("</stroke>", file=f)
 
 class Document(object):
     """ This is the main document handling class.
@@ -796,27 +812,17 @@ class Document(object):
                         for i in s[3]:
                             print("    ", i[0]*page.pw, i[1]*page.ph, file=f)
                         print("</stroke>", file=f)
-                    if s[0] == 'box':
+                    if s[0] in ['box', "ellipse"]:
                         if len(s) > 5 and s[5].alpha > 0:
                             fill_color = '#{:02x}{:02x}{:02x}{:02x}'.format(int(s[5].red*255), int(s[5].green*255), int(s[5].blue*255), int(s[5].alpha*255))
-                            pen = "pen" if s[5].alpha == 1 else "highlighter"
+                            pen = "pen" if s[1].alpha == 1 else "highlighter"
                             print(f"<stroke tool=\"{pen}\" ts=\"0ll\" fn=\"\" color=\"{fill_color}\" width=\"{s[2]}\" fill=\"{int(s[5].alpha*255)}\">", file=f)
-                            print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
-                            print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
-                            print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
-                            print("    ", s[3][0][0]*page.pw, s[3][1][1]*page.ph, file=f)
-                            print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
-                            print("</stroke>", file=f)
+                            xopp_box_ellipse(s, page, f)
                         if s[1].alpha > 0:
                             pen = "pen" if s[1].alpha == 1 else "highlighter"
                             print(f"<stroke tool=\"{pen}\" ts=\"0ll\" fn=\"\" color=\"{color}\" width=\"{s[2]}\">", file=f)
-                            print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
-                            print("    ", s[3][1][0]*page.pw, s[3][0][1]*page.ph, file=f)
-                            print("    ", s[3][1][0]*page.pw, s[3][1][1]*page.ph, file=f)
-                            print("    ", s[3][0][0]*page.pw, s[3][1][1]*page.ph, file=f)
-                            print("    ", s[3][0][0]*page.pw, s[3][0][1]*page.ph, file=f)
-                            print("</stroke>", file=f)
-                    if s[0] == 'text':
+                            xopp_box_ellipse(s, page, f)
+                    if s[0] == 'text' and s[5]:
                         font = s[6].rsplit(' ', 1)
                         x = s[4][0][0]*page.pw
                         y = s[3][0][1]*page.ph
