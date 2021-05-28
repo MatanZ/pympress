@@ -183,6 +183,7 @@ class Scribbler(builder.Builder):
     min_distance = 0
 
     scribble_font = "serif 16"
+    font_size = 16
     text_entry = False
     draw_blink = True
     text_alignment = 0
@@ -758,7 +759,7 @@ class Scribbler(builder.Builder):
                 self.scribble_list[-1][3].append([
                     self.scribble_list[-1][3][1][0], self.scribble_list[-1][3][1][1]])
             if self.drawing_mode in ["box", "ellipse"]:
-                self.scribble_list[-1][4] = [x[:] for x in self.scribble_list[-1][3]] 
+                self.scribble_list[-1][4] = [x[:] for x in self.scribble_list[-1][3]]
 
             self.scribble_drawing = False
             if self.pen_pointer:
@@ -1137,6 +1138,7 @@ class Scribbler(builder.Builder):
 
         self.drawing_mode = None
         self.text_entry = False
+        self.selected = []
         self.select_rect = [[],[]]
         self.show_button("")
         self.pen_pointer_p = Gdk.Cursor.new_for_display(Gdk.Display.get_default(), Gdk.CursorType.X_CURSOR).get_image()
