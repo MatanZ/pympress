@@ -1082,7 +1082,7 @@ class Scribbler(builder.Builder):
         self.drawing_mode = "select_r"
         self.show_button("select_r")
         self.text_entry = False
-        self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.CROSSHAIR).get_image()
+        self.pen_pointer_p = Gdk.Cursor.new_for_display(Gdk.Display.get_default(), Gdk.CursorType.CROSSHAIR).get_image()
         return True
 
     def next_tool(self, *args):
@@ -1106,7 +1106,7 @@ class Scribbler(builder.Builder):
                 pts = i[4]
                 for p in pts:
                     add_point_rect_ordered(p, self.select_rect)
-            self.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.FLEUR).get_image()
+            self.pen_pointer_p = Gdk.Cursor.new_for_display(Gdk.Display.get_default(), Gdk.CursorType.FLEUR).get_image()
         return True
 
     def add_undo(self, operation, update=False):
