@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 import math
 import os
+import sympy
+import io
 
 import gi
 import cairo
@@ -74,7 +76,7 @@ def intersects(p0, p1, scribble):
         for i in range(len(scribble[3]) - 1):
             if segments_intersect(p1, p0, scribble[3][i], scribble[3][i + 1]):
                 return True
-    elif scribble[0] in ("box", "text", "ellipse", "image"):
+    elif scribble[0] in ("box", "text", "ellipse", "image", "latex"):
         if min(scribble[4][0][0], scribble[4][1][0]) <= p1[0] <= \
            max(scribble[4][0][0], scribble[4][1][0]) and \
            min(scribble[4][0][1], scribble[4][1][1]) <= p1[1] <= \
@@ -97,6 +99,13 @@ def has_fill(scribble):
         return scribble[0] in ["box", "ellipse"]
     except:
         return False
+
+def is_text(scribble):
+    try:
+        return scribble[0] in ["latex", "text"]
+    except:
+        return False
+
 
 class Scribbler(builder.Builder):
     """ UI that allows to draw free-hand on top of the current slide.
@@ -218,6 +227,34 @@ class Scribbler(builder.Builder):
 
         self.read_stamps(config)
 
+    def latex_to_pixbuf(self, text, size, color, png=False):
+        # Rudimentary check for legal latex string:
+        if text.count("$") % 2 or \
+           text.count("\\begin") != text.count("\\end"):
+            return None
+        preamble = """ \\documentclass[varwidth,12pt]{standalone}
+            \\usepackage{amsmath,amsfonts,xcolor}
+            \\begin{document}
+            \\color[rgb]{%f,%f,%f}
+        """ % (color.red, color.green, color.blue)
+        fn = "/tmp/ppl.png"
+        try:
+            #buf = io.BytesIO()
+            #sympy.preview(text, output='png', viewer='BytesIO', outputbuffer=buf,
+            #              dvioptions=["-T", "tight", "-z", "0", "--truecolor", "-D " + str(size)])
+            sympy.preview("\\color[rgb]{%f,%f,%f}\n%s" % (color.red, color.green, color.blue, text),
+                          output='png', viewer="file", filename=fn, euler=False,
+                          preamble=preamble,
+                          dvioptions=["-T", "tight", "-z", "0", "--truecolor", "-D " + str(size)])
+            if png:
+                buf = open(fn,"rb").read()
+            else:
+                buf = GdkPixbuf.Pixbuf.new_from_file(fn)
+        except:
+            return None
+        return buf
+
+
     def evdev_callback_buttons(self, name):
         self.nav_scribble(name, False, command=name)
         return False
@@ -259,6 +296,8 @@ class Scribbler(builder.Builder):
             self.enable_draw()
         elif command == 'erase':
             self.enable_erase()
+        elif command == 'latex':
+            self.enable_latex()
         elif command == 'ellipse':
             self.enable_ellipse()
         elif command == 'box':
@@ -316,8 +355,10 @@ class Scribbler(builder.Builder):
         return True
 
     def key_entered(self, val, s, state):
-        if not self.text_entry or not self.scribble_list or self.scribble_list[-1][0] != "text":
+        if not self.text_entry or not self.scribble_list or not is_text(self.text_entry):
             return False
+        mode = self.text_entry[0]
+        shortcuts = mode == "text"
         pos = self.text_pos
         if val in (Gdk.KEY_Escape, Gdk.KEY_Page_Down, Gdk. KEY_Page_Up):
             self.text_entry = False
@@ -346,10 +387,20 @@ class Scribbler(builder.Builder):
             pos = pos + 1
         elif val == Gdk.KEY_Delete and pos < len(self.text_entry[5]):
             self.text_entry[5] = self.text_entry[5][:pos] + self.text_entry[5][pos + 1:]
-        elif (31 < val < 65280 or val in (Gdk.KEY_Return, )) and s and not state & Gdk.ModifierType.CONTROL_MASK:
+        elif (31 < val < 65280 or val in (Gdk.KEY_Return, )) and s and state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.MOD1_MASK):
+            mod = "alt" if state & Gdk.ModifierType.MOD1_MASK else ""
+            mod += "ctrl" if state & Gdk.ModifierType.CONTROL_MASK else ""
+            try:
+                s, p = self.latex_macros[mode][mod][chr(val)]
+                self.text_entry[5] = self.text_entry[5][:pos] + s + self.text_entry[5][pos:]
+                pos += p
+            except:
+                pass
+
+        elif (31 < val < 65280 or val in (Gdk.KEY_Return, )) and s and not state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.MOD1_MASK):
             self.text_entry[5] = self.text_entry[5][:pos] + s + self.text_entry[5][pos:]
             pos = pos + 1
-            i = self.text_entry[5].rfind('\\', 0, pos - 1)
+            i = self.text_entry[5].rfind('\\', 0, pos - 1) if shortcuts else -2
             if i > -1:
                 if self.text_entry[5][i+1:pos] in self.latex_dict:
                     if self.text_entry[5][i+1:pos] not in self.latex_prefixes:
@@ -377,12 +428,16 @@ class Scribbler(builder.Builder):
         else:
             #logger.debug(f"unknown key, {val=}, {s=}, name={Gdk.keyval_name(val)}")
             pass
+        if mode == "latex" and self.text_entry[7] != self.text_entry[5]:
+            self.text_entry[6] = self.latex_to_pixbuf(self.text_entry[5], 6 * self.font_size, self.scribble_color)
+            self.text_entry[7] = self.text_entry[5]
         self.redraw_current_slide()
         self.text_pos = pos
         return True
 
     def read_stamps(self, config):
         if 'stamps' in config:
+            iconw, iconh = 32, 32
             for name in config['stamps']:
                 self.stamp_names.append(name)
                 stamp_str = self.config.get('stamps', name)
@@ -395,6 +450,11 @@ class Scribbler(builder.Builder):
                     }
                     self.stamps[name]['image'] = Gtk.Image().new_from_file(stamp_str)
                     self.stamps[name]['pixbuf'] = self.stamps[name]['image'].get_pixbuf()
+                    w, h = self.stamps[name]['pixbuf'].get_width(), self.stamps[name]['pixbuf'].get_height()
+                    if w > iconw or h > iconh:
+                        scale = min(iconw/w, iconh/h)
+                        self.stamps[name]['image'].set_from_pixbuf(
+                            self.stamps[name]['pixbuf'].scale_simple(w*scale, h*scale, GdkPixbuf.InterpType.BILINEAR) )
                 elif len(p) == 3:
                     color = Gdk.RGBA()
                     color.parse(p[0])
@@ -405,7 +465,6 @@ class Scribbler(builder.Builder):
                         'font': p[1],
                         'str': p[2],
                     }
-                    iconw, iconh = 32, 32
                     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, iconw, iconh)
                     cairo_ctx = cairo.Context(surface)
                     cairo_ctx.set_source_rgb(1.0, 1.0, 1.0)
@@ -425,7 +484,7 @@ class Scribbler(builder.Builder):
                     # Convert from BGRA (Cairo) to RGBA (Gdk)
                     for i in range(0, len(b), 4):
                         b[i], b[i+2] = b[i+2],b[i]
-                    pixbuf = GdkPixbuf.Pixbuf.new_from_data(b, GdkPixbuf.Colorspace.RGB, True, 8, 32, 32, 128)
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_data(b, GdkPixbuf.Colorspace.RGB, True, 8, iconw, iconh, 128)
                     self.stamps[name]['image'] = Gtk.Image.new_from_pixbuf(pixbuf)
 
     def set_stamp(self, name=None):
@@ -605,13 +664,16 @@ class Scribbler(builder.Builder):
             # No tool selected.
             # Allow selecting text for edit
             for scribble in self.scribble_list[:]:
-                if scribble[0] == "text" and intersects(point, point, scribble):
+                if is_text(scribble) and intersects(point, point, scribble):
                     # Move scribble to end of list
                     self.scribble_list.remove(scribble)
                     self.scribble_list.append(scribble)
                     self.text_entry = self.scribble_list[-1]
                     self.text_pos = len(self.text_entry[5])
-                    self.enable_text()
+                    if scribble[0] == "text":
+                        self.enable_text()
+                    elif scribble[0] == "latex":
+                        self.enable_latex()
                     self.scribble_drawing = True
                     self.redraw_current_slide()
                     return True
@@ -662,6 +724,12 @@ class Scribbler(builder.Builder):
                 p = list(point)
                 p[1] = p[1] - 0.01 # On my screen and default font size, 0.01 aligns the bottom of the cursor with the text's baseline.
                 self.scribble_list.append(["text", self.scribble_color, self.scribble_width, [p], [[0, 0], [0, 0]], "", self.scribble_font, alignment])
+                self.text_entry = self.scribble_list[-1]
+                self.text_pos = len(self.text_entry[5])
+                self.add_undo(('a', self.scribble_list[-1]))
+            elif self.drawing_mode == "latex":
+                p = list(point)
+                self.scribble_list.append(["latex", self.scribble_color, self.scribble_width, [p], [[0, 0], [0, 0]], "", None, ""])
                 self.text_entry = self.scribble_list[-1]
                 self.text_pos = len(self.text_entry[5])
                 self.add_undo(('a', self.scribble_list[-1]))
@@ -772,10 +840,10 @@ class Scribbler(builder.Builder):
                 cairo_context.set_line_width(width)
                 cairo_context.stroke()
                 cairo_context.restore()
-            elif stype == "text":
+            elif stype == "text" or (stype == "latex" and widget is self.p_da_cur):
                 layout = PangoCairo.create_layout(cairo_context)
                 PangoCairo.context_set_resolution(layout.get_context(), 72 * pixels_per_point)
-                font=extra[1]
+                font = extra[1] if stype == "text" else "Roboto Mono Bold 12"
                 layout.set_font_description(Pango.FontDescription(font))
                 if self.text_entry == scribble and widget is self.c_da:
                     # Don't show tex shortcut
@@ -786,10 +854,13 @@ class Scribbler(builder.Builder):
                         layout.set_text(extra[0])
                 else:
                     layout.set_text(extra[0])
-                cairo_context.set_source_rgba(*color)
-                if rect == [[0, 0], [0, 0]]:
+                if stype == "text":
+                    cairo_context.set_source_rgba(*color)
+                else:
+                    cairo_context.set_source_rgba(0.5,0.5,0.5,0.5)
+                if rect == [[0, 0], [0, 0]] and stype == "text":
                     _, ext = layout.get_extents()
-                    rect[0] = [ points[0][0] + ext.x / ww / Pango.SCALE, points[0][1] + ext.y / wh / Pango.SCALE ]
+                    rect[0] = [points[0][0] + ext.x / ww / Pango.SCALE, points[0][1] + ext.y / wh / Pango.SCALE]
                     rect[1][0] = rect[0][0] + ext.width / ww / Pango.SCALE
                     rect[1][1] = rect[0][1] + ext.height / wh / Pango.SCALE
                     if rect[0][0] > rect[1][0]:
@@ -807,14 +878,16 @@ class Scribbler(builder.Builder):
                     rect[0][0] += dx
                     rect[1][0] += dx
 
-                cairo_context.move_to(rect[0][0] * ww, points[0][1] * wh)
+                x = rect[0][0] * ww if stype == "text" else points[0][0] * ww
+                y = points[0][1] * wh if stype == "text" else points[0][1] * wh - 16
+                cairo_context.move_to(x, y)
                 PangoCairo.update_layout(cairo_context, layout)
                 PangoCairo.show_layout(cairo_context, layout)
 
                 if self.text_entry == scribble and widget is self.p_da_cur and self.draw_blink:
                     cursor = layout.get_cursor_pos(len(bytearray(extra[0][:self.text_pos],"utf8")))
-                    cur_x = rect[0][0] * ww + cursor.strong_pos.x / Pango.SCALE
-                    cur_y = points[0][1] * wh + cursor.strong_pos.y / Pango.SCALE
+                    cur_x = x + cursor.strong_pos.x / Pango.SCALE
+                    cur_y = y + cursor.strong_pos.y / Pango.SCALE
                     cur_y1 = cur_y + cursor.strong_pos.height / Pango.SCALE
                     cairo_context.move_to(cur_x, cur_y)
                     cairo_context.line_to(cur_x, cur_y1)
@@ -836,22 +909,29 @@ class Scribbler(builder.Builder):
                     cairo_context.set_line_width(1)
                     cairo_context.set_dash([4,2])
                     cairo_context.stroke()
-            elif stype == "image":
-                pixbuf = extra[0]
-                if rect != [[0, 0], [0, 0]] and widget is self.p_da_cur:
-                    w = int((rect[1][0] - rect[0][0]) * ww)
-                    h = int((rect[1][1] - rect[0][1]) * wh)
-                    pixbuf = pixbuf.scale_simple(w, h, GdkPixbuf.InterpType.BILINEAR)
-                w, h = pixbuf.get_width(), pixbuf.get_height()
-                x, y = int(points[0][0]*ww), int(points[0][1]*wh)
-                cairo_context.rectangle(x, y, w, h)
-                Gdk.cairo_set_source_pixbuf(cairo_context, pixbuf, x, y)
-                cairo_context.paint()
-                cairo_context.reset_clip()
-                cairo_context.new_path()
-                if rect == [[0, 0], [0, 0]] and widget is self.c_da:
-                    rect[0] = [ points[0][0], points[0][1] ]
-                    rect[1] = [ rect[0][0] + w/ww, rect[0][1] + h/wh ]
+            if stype in ["image", "latex"]:
+                pixbuf = extra[0] if stype == "image" else extra[1]
+                if not pixbuf and stype == "latex" and extra[0] != extra[2]:
+                    scribble[6] = self.latex_to_pixbuf(extra[0], 6 * self.font_size, self.scribble_color)
+                    scribble[7] = scribble[5]
+                    pixbuf = scribble[6]
+                if pixbuf:
+                    if rect != [[0, 0], [0, 0]] and widget is self.p_da_cur:
+                        w = int((rect[1][0] - rect[0][0]) * ww)
+                        h = int((rect[1][1] - rect[0][1]) * wh)
+                        pixbuf = pixbuf.scale_simple(w, h, GdkPixbuf.InterpType.BILINEAR)
+                        if self.text_entry == scribble:
+                            pixbuf = pixbuf.add_alpha(True, 255, 255, 255)
+                    w, h = pixbuf.get_width(), pixbuf.get_height()
+                    x, y = int(points[0][0]*ww), int(points[0][1]*wh)
+                    cairo_context.rectangle(x, y, w, h)
+                    Gdk.cairo_set_source_pixbuf(cairo_context, pixbuf, x, y)
+                    cairo_context.paint()
+                    cairo_context.reset_clip()
+                    cairo_context.new_path()
+                    if rect == [[0, 0], [0, 0]] and widget is self.c_da:
+                        rect[0] = [points[0][0], points[0][1]]
+                        rect[1] = [rect[0][0] + w/ww, rect[0][1] + h/wh]
 
         if widget is self.p_da_cur and self.select_rect[1]:
                 points = [(p[0] * ww, p[1] * wh) for p in self.select_rect]
@@ -881,6 +961,11 @@ class Scribbler(builder.Builder):
                         s[6] = widget.get_font()
                         s[4] = [[0,0],[0,0]]
             self.scribble_font = widget.get_font()
+            i = rfind(self.scribble_font, ' ')
+            try:
+               self.font_size = int(self.scribble_font[i:])
+            except:
+                self.font_size = 16
             widget.get_children()[0].get_children()[0].set_label("A")
             widget.set_use_size(widget.get_font_size() < 24576)
 
@@ -1039,13 +1124,14 @@ class Scribbler(builder.Builder):
             "ellipse": Gdk.CursorType.CIRCLE,
             "stamp": Gdk.CursorType.BLANK_CURSOR,
             "select_t": Gdk.CursorType.HAND1,
+            "latex":  Gdk.CursorType.XTERM,
         }
         self.drawing_mode = tool
         self.show_button(tool)
         if tool != "select_t":
             self.selected = []
         self.select_rect = [[],[]]
-        if tool != "text":
+        if tool not in ["text", "latex"]:
             self.text_entry = False
         self.pen_pointer_p = Gdk.Cursor(pointer_dict[tool]).get_image()
         return True
@@ -1067,6 +1153,9 @@ class Scribbler(builder.Builder):
 
     def enable_text(self, *args):
         return self.enable_tool("text")
+
+    def enable_latex(self, *args):
+        return self.enable_tool("latex")
 
     def enable_stamp(self, *args):
         if not self.stamps:

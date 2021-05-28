@@ -709,9 +709,13 @@ class Document(object):
                             scribble[1] = Gdk.RGBA(*scribble[1]['rgba'])
                             if scribble[0] in ['box', 'ellipse'] and len(scribble) > 5:
                                 scribble[5] = Gdk.RGBA(*scribble[5]['rgba'])
-                            if scribble[0] == 'image':
-                                data = GLib.Bytes(base64.b64decode(scribble[5]['pixels']))
-                                scribble[5] = GdkPixbuf.Pixbuf.new_from_bytes(data, *scribble[5]['params'])
+                            if scribble[0] in ['image', 'latex']:
+                                pp = 5 if scribble[0] == 'image' else 6
+                                try:
+                                    data = GLib.Bytes(base64.b64decode(scribble[pp]['pixels']))
+                                    scribble[pp] = GdkPixbuf.Pixbuf.new_from_bytes(data, *scribble[pp]['params'])
+                                except:
+                                    scribble[pp] = None
                         self.scribbles[int(key.split('.')[0])] = scribble_list
             except OSError:
                 pass
@@ -767,6 +771,11 @@ class Document(object):
         out_dict = {}
         if self.highlight_mode == "autopage":
             out_dict['scribbles'] = self.scribbles
+            for scribbles in out_dict['scribbles'].values():
+                for scribble in scribbles:
+                    if scribble[0] == "latex":
+                        scribble[6] = None
+                        scribble[7] = ""
         out_dict['page_map'] = self.page_map
         if self.path:
             path = self.path
@@ -828,6 +837,22 @@ class Document(object):
                         y = s[3][0][1]*page.ph
                         text = xml_escape(s[5])
                         print(f"<text font=\"{font[0]}\" size=\"{font[1]}\" x=\"{x}\" y=\"{y}\" ts=\"0ll\" color=\"{color}\">{text}</text>", file=f)
+                    if s[0] == 'image' and s[5]:
+                        x = s[4][0][0]*page.pw
+                        y = s[4][0][1]*page.ph
+                        x1 = s[4][1][0]*page.pw
+                        y1 = s[4][1][1]*page.ph
+                        image = base64.b64encode(s[5].save_to_bufferv('png',[],[])[1]).decode('ascii')
+                        print(f'<image left="{x}" top="{y}" right="{x1}" bottom="{y1}">{image}</image>', file=f)
+                    if s[0] == 'latex' and s[5]:
+                        x = s[4][0][0]*page.pw
+                        y = s[4][0][1]*page.ph
+                        x1 = s[4][1][0]*page.pw
+                        y1 = s[4][1][1]*page.ph
+                        png = self.scribbler.latex_to_pixbuf(s[5], 300, s[1], png=True)
+                        if png:
+                            image = base64.b64encode(png).decode('ascii')
+                            print(f'<teximage text="{s[5]}" left="{x}" top="{y}" right="{x1}" bottom="{y1}">{image}</teximage>', file=f)
             print("</layer>", file=f)
             print("</page>", file=f)
         print("</xournal>", file=f)
