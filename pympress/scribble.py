@@ -978,21 +978,36 @@ class Scribbler(builder.Builder):
         """
         color = widget.get_rgba()
 
-        if self.set_color_fill:
-            self.fill_color = color
-            widget.set_rgba(self.scribble_color)
-            return
-        elif self.selected:
+        if self.selected:
             self.add_undo(('c', [[s, s[1], color] for s in self.selected]))
             for s in self.selected:
                 s[1] = color
             widget.set_rgba(self.scribble_color)
             return
-        elif self.text_entry and self.scribble_list and self.scribble_list[-1][0] == "text":
+        elif self.text_entry and self.scribble_list and self.scribble_list[-1][0] in ["text", "latex"]:
             self.scribble_list[-1][1] = color
         self.scribble_color = color
         self.buttons["scribble_alpha"].set_value(self.scribble_color.alpha)
         self.config.set('scribble', 'color', self.scribble_color.to_string())
+
+    def update_fill_color(self, widget):
+        """ Callback for the color chooser button, to set scribbling color.
+
+        Args:
+            widget (:class:`~Gtk.ColorButton`):  the clicked button to trigger this event, if any
+        """
+        color = widget.get_rgba()
+
+        if self.selected:
+            self.add_undo(('cf', [[s, s[5], color] for s in self.selected if has_fill(s)]))
+            for s in self.selected:
+                if has_fill(s):
+                    s[5] = color
+            widget.set_rgba(self.fill_color)
+            return
+        self.fill_color = color
+        self.buttons["fill_alpha"].set_value(self.fill_color.alpha)
+        self.config.set('scribble', 'fill_color', self.fill_color.to_string())
 
     def update_alpha(self, widget, event, value):
         """ Callback for the alpha slider
@@ -1012,6 +1027,28 @@ class Scribbler(builder.Builder):
         else:
             self.scribble_color = rgba
             self.buttons["color_button"].set_rgba(rgba)
+            self.config.set('scribble', 'rgba', self.scribble_color.to_string())
+
+    def update_fill_alpha(self, widget, event, value):
+        """ Callback for the fill alpha slider
+
+        Args:
+            widget (:class:`~Gtk.Scale`): The slider control used to select alpha channel value
+            event (:class:`~Gdk.Event`):  the GTK event triggering this update.
+            value (`int`): the width of the scribbles to be drawn
+        """
+        # It seems that values returned are not necessarily in range
+        alpha = min(max(0, int(value * 100) / 100), 1)
+        rgba = Gdk.RGBA(self.fill_color.red, self.fill_color.green, self.fill_color.blue, alpha)
+        if self.selected:
+            selected = [x for x in self.selected if has_fill(x)]
+            if selected:
+                self.add_undo(('pf', [[s, s[5].alpha, alpha] for s in selected]), True)
+                for s in selected:
+                    s[5] = Gdk.RGBA(s[5].red, s[5].green, s[5].blue, alpha)
+        else:
+            self.fill_color = rgba
+            self.buttons["fill_color_button"].set_rgba(rgba)
             self.config.set('scribble', 'rgba', self.scribble_color.to_string())
 
     def update_width(self, widget, event, value):
@@ -1242,6 +1279,9 @@ class Scribbler(builder.Builder):
             elif op[0] == 'c':
                 for s, oc, nc in op[1]:
                     s[1] = oc
+            elif op[0] == 'cf':
+                for s, oc, nc in op[1]:
+                    s[5] = oc
             elif op[0] == 'm':
                 adjust_scribbles(op[1], -op[2], -op[3])
 
@@ -1268,6 +1308,9 @@ class Scribbler(builder.Builder):
             elif op[0] == 'c':
                 for s, oc, nc in op[1]:
                     s[1] = nc
+            elif op[0] == 'cf':
+                for s, oc, nc in op[1]:
+                    s[5] = nc
             elif op[0] == 'm':
                 adjust_scribbles(op[1], op[2], op[3])
             self.undo_stack_pos = self.undo_stack_pos + 1

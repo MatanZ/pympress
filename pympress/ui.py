@@ -368,30 +368,38 @@ class UI(builder.Builder):
 
         icons = util.list_toolbar_icons()
 
-        buttons = [
-            ("export_xopp", "toolbar-export-xopp", "Export"),
-            ("export_pdf", "toolbar-export-pdf", "Export PDF"),
-            ("", "", ""),
-            ("unzoom", "zoom-fit-best", "No zoom"),
-            ("zoom", "zoom-in", "Zoom in"),
-            ("", "", ""),
-            ("undo", "edit-undo", "Undo"),
-            ("redo", "edit-redo", "Redo"),
-            ("clear_all", "edit-clear-all", "Clear"),
-            ("", "", ""),
-            ("cancel", "process-stop", "Disable scribbling"),
-            ("draw", "toolbar-pen", "Draw freehand"),
-            ("erase", "toolbar-erase", "Erase"),
-            ("line", "toolbar-line", "Draw line"),
-            ("box", "toolbar-rect", "Draw rectangle"),
-            ("text", "toolbar-text", "Enter text"),
-            ("stamp", "toolbar-stamp", "Stamp"),
-            ("", "", ""),
-            ("select_t", "toolbar-select", "Select freehand"),
-            ("select_r", "toolbar-select_r", "Select rectangle"),
-            ("move", "toolbar-move", "Move selected"),
-            ("", "", ""),
-        ]
+        buttons = {
+            "operations": [
+                ("export_xopp", "toolbar-export-xopp", "Export"),
+                ("export_pdf", "toolbar-export-pdf", "Export PDF"),
+                ("", "", ""),
+                ("unzoom", "zoom-fit-best", "No zoom"),
+                ("zoom", "zoom-in", "Zoom in"),
+                ("", "", ""),
+                ("undo", "edit-undo", "Undo"),
+                ("redo", "edit-redo", "Redo"),
+                ("clear_all", "edit-clear-all", "Clear"),
+            ],
+            "tools": [
+                ("cancel", "process-stop", "Disable scribbling"),
+                ("draw", "toolbar-pen", "Draw freehand"),
+                ("erase", "toolbar-erase", "Erase"),
+                ("line", "toolbar-line", "Draw line"),
+                ("box", "toolbar-rect", "Draw rectangle"),
+                ("ellipse", "toolbar-ellipse", "Draw ellipse"),
+                ("text", "toolbar-text", "Enter text"),
+                ("latex", "toolbar-latex", "Enter LaTeX text"),
+                ("stamp", "toolbar-stamp", "Stamp"),
+                ("", "", ""),
+                ("select_t", "toolbar-select", "Select freehand"),
+                ("select_r", "toolbar-select_r", "Select rectangle"),
+                ("move", "toolbar-move", "Move selected"),
+            ],
+            "attributes": [
+                ("", "", ""),
+            ]
+        }
+        toolbar_names = buttons.keys()
 
         if self.config.get("presenter", "toolbar_orientation", fallback="auto")[0].lower() == 'v':
             orientation = Gtk.Orientation.VERTICAL
@@ -412,30 +420,58 @@ class UI(builder.Builder):
             vsize = 96
             value_pos = Gtk.PositionType.RIGHT
 
-        toolbar = Gtk.Toolbar()
-        toolbar.set_name("toolbar")
-        toolbar.set_style(Gtk.ToolbarStyle.ICONS)
-        toolbar.set_orientation(orientation)
-        toolbar.set_icon_size(Gtk.IconSize.DND)
-
         self.scribbler.buttons = {}
-        for name, icon, label in buttons:
-            if name == "":
-                toolbar.insert(Gtk.SeparatorToolItem.new(), 999)
-            else:
-                if icon in icons:
-                    image = Gtk.Image.new_from_file(icons[icon])
-                else:
-                    image = Gtk.Image.new_from_icon_name(icon, hsize)
-                button = Gtk.ToolButton.new(image, None)
-                button.set_name(name)
-                button.set_label(label)
-                button.set_tooltip_text(label)
-                button.connect("clicked", self.toolbar_click)
-                button.connect("button-press-event", self.on_navigation)
-                toolbar.insert(button, 999)
-                self.scribbler.buttons[name] = button
+        toolbars = {}
+        for tn in toolbar_names:
+            toolbar = Gtk.Toolbar()
+            toolbars[tn] = toolbar
+            toolbar.set_name(tn)
+            toolbar.set_style(Gtk.ToolbarStyle.ICONS)
+            toolbar.set_orientation(orientation)
+            toolbar.set_icon_size(Gtk.IconSize.DND)
 
+            for name, icon, label in buttons[tn]:
+                if name == "":
+                    toolbar.insert(Gtk.SeparatorToolItem.new(), 999)
+                else:
+                    if icon in icons:
+                        image = Gtk.Image.new_from_file(icons[icon])
+                    else:
+                        image = Gtk.Image.new_from_icon_name(icon, hsize)
+                    button = Gtk.ToolButton.new(image, None)
+                    button.set_name(name)
+                    button.set_label(label)
+                    button.set_tooltip_text(label)
+                    button.connect("clicked", self.toolbar_click)
+                    button.connect("button-press-event", self.on_navigation)
+                    toolbar.insert(button, 999)
+                    self.scribbler.buttons[name] = button
+            if orientation == Gtk.Orientation.HORIZONTAL:
+                self.bigvbox.pack_start(toolbar, False, False, 1)
+                self.bigvbox.reorder_child(toolbar, 1)
+            else:
+                self.p_central.pack_start(toolbar, False, False, 1)
+                self.p_central.reorder_child(toolbar, 0)
+
+        font_button = Gtk.FontButton.new()
+        font_button.connect("font-set", self.scribbler.update_font)
+        font_button.set_name("scribble_font")
+        font_button.set_size_request(48,48)
+        font_button.set_show_style(False)
+        font_button.set_show_size(False)
+        font_button.set_use_font(True)
+        #font_button.set_font_name(self.scribbler.scribble_font)
+        Gtk.FontChooser.set_font(font_button, self.scribbler.scribble_font)
+        font_button.set_use_size(font_button.get_font_size() < 24576)
+        toolbar_font_button = Gtk.ToolItem.new()
+        toolbar_font_button.add(font_button)
+        toolbar.insert(toolbar_font_button, 999)
+        self.scribbler.buttons["font_button"] = font_button
+        font_button.get_children()[0].get_children()[0].set_label("A")
+
+        toolbar.insert(Gtk.SeparatorToolItem.new(), 999)
+
+        toolbar = toolbars["attributes"]
         width_scale = Gtk.Scale.new_with_range(orientation, 0, 299, 5)
         width_scale.set_name("scribble_width")
         width_scale.set_digits(0)
@@ -449,6 +485,8 @@ class UI(builder.Builder):
         toolbar_width_scale.add(width_scale)
         toolbar.insert(toolbar_width_scale, 999)
         self.scribbler.buttons["scribble_width"] = width_scale
+
+        toolbar.insert(Gtk.SeparatorToolItem.new(), 999)
 
         alpha_scale = Gtk.Scale.new_with_range(orientation, 0, 1, 0.1)
         alpha_scale.set_name("scribble_alpha")
@@ -465,45 +503,44 @@ class UI(builder.Builder):
 
         color_button = Gtk.ColorButton.new_with_rgba(self.scribbler.scribble_color)
         color_button.connect("color-set", self.scribbler.update_color)
-        color_button.connect("button-press-event", self.color_button_mode)
         color_button.set_name("scribble_color")
         color_button.set_size_request(48,48)
-        color_button.set_use_alpha(True)
+        Gtk.ColorChooser.set_use_alpha(color_button, True)
         toolbar_color_button = Gtk.ToolItem.new()
         toolbar_color_button.add(color_button)
         toolbar.insert(toolbar_color_button, 999)
         self.scribbler.buttons["color_button"] = color_button
 
-        font_button = Gtk.FontButton.new()
-        font_button.connect("font-set", self.scribbler.update_font)
-        font_button.set_name("scribble_font")
-        font_button.set_size_request(48,48)
-        font_button.set_show_style(False)
-        font_button.set_show_size(False)
-        font_button.set_use_font(True)
-        font_button.set_font_name(self.scribbler.scribble_font)
-        font_button.set_use_size(font_button.get_font_size() < 24576)
-        toolbar_font_button = Gtk.ToolItem.new()
-        toolbar_font_button.add(font_button)
-        toolbar.insert(toolbar_font_button, 999)
-        self.scribbler.buttons["font_button"] = font_button
-        font_button.get_children()[0].get_children()[0].set_label("A")
+        toolbar.insert(Gtk.SeparatorToolItem.new(), 999)
+        toolbar.insert(Gtk.SeparatorToolItem.new(), 999)
+
+        fill_alpha_scale = Gtk.Scale.new_with_range(orientation, 0, 1, 0.1)
+        fill_alpha_scale.set_name("fill_alpha")
+        fill_alpha_scale.set_digits(2)
+        fill_alpha_scale.set_draw_value(True)
+        fill_alpha_scale.set_has_origin(True)
+        fill_alpha_scale.set_value_pos(value_pos)
+        fill_alpha_scale.set_size_request(hsize,vsize)
+        fill_alpha_scale.connect("change-value", self.scribbler.update_fill_alpha)
+        toolbar_fill_alpha_scale = Gtk.ToolItem.new()
+        toolbar_fill_alpha_scale.add(fill_alpha_scale)
+        toolbar.insert(toolbar_fill_alpha_scale, 999)
+        self.scribbler.buttons["fill_alpha"] = fill_alpha_scale
+
+        fill_color_button = Gtk.ColorButton.new_with_rgba(self.scribbler.fill_color)
+        fill_color_button.connect("color-set", self.scribbler.update_fill_color)
+        fill_color_button.set_name("fill_color")
+        fill_color_button.set_size_request(48,48)
+        Gtk.ColorChooser.set_use_alpha(fill_color_button, True)
+        toolbar_fill_color_button = Gtk.ToolItem.new()
+        toolbar_fill_color_button.add(fill_color_button)
+        toolbar.insert(toolbar_fill_color_button, 999)
+        self.scribbler.buttons["fill_color_button"] = fill_color_button
+
 
         alpha_scale.set_value(self.scribbler.scribble_color.alpha)
+        fill_alpha_scale.set_value(self.scribbler.fill_color.alpha)
         width_scale.set_value(self.scribbler.width_curve_r(self.scribbler.scribble_width))
-
-        if orientation == Gtk.Orientation.HORIZONTAL:
-            self.bigvbox.pack_start(toolbar, False, False, 1)
-            self.bigvbox.reorder_child(toolbar, 1)
-        else:
-            self.p_central.pack_start(toolbar, False, False, 1)
-            self.p_central.reorder_child(toolbar, 0)
-
-    def color_button_mode(self, widget, event):
-        ctrl_pressed = event.get_state() & Gdk.ModifierType.CONTROL_MASK
-        shift_pressed = event.get_state() & Gdk.ModifierType.SHIFT_MASK
-        meta_pressed = event.get_state() & Gdk.ModifierType.MOD1_MASK
-        self.scribbler.set_color_fill = ctrl_pressed | shift_pressed
 
     def setup_screens(self):
         """ Sets up the position of the windows.
