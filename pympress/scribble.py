@@ -32,6 +32,7 @@ import math
 import os
 import sympy
 import io
+import copy
 
 import gi
 import cairo
@@ -181,6 +182,7 @@ class Scribbler(builder.Builder):
 
     selected = []
     select_rect = [[],[]]
+    clipboard = None
 
     min_distance = 0
 
@@ -323,6 +325,10 @@ class Scribbler(builder.Builder):
             self.set_pen(name)
         elif command == 'fill_copy':
             self.fill_color = self.scribble_color
+        elif command == 'copy':
+            self.copy()
+        elif command == 'paste':
+            self.paste()
         elif command == 'move':
             self.enable_move()
         elif command == 'del_selected':
@@ -536,6 +542,16 @@ class Scribbler(builder.Builder):
             pen_num = int(name)
         except ValueError:
             pass
+
+    def copy(self):
+        self.clipboard = copy.deepcopy(self.selected)
+
+    def paste(self):
+        if self.clipboard:
+            # Allows for pasting multiple times
+            s = copy.deepcopy(self.clipboard)
+            self.scribble_list.extend(s)
+            self.add_undo(('a', s))
 
     def select_all(self):
         self.selected = self.scribble_list[:]
