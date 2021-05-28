@@ -161,7 +161,7 @@ class Pointer(object):
             if max(ww, wh) == 1:
                 continue
 
-            pointer_coordinates = slide_widget.get_window().get_pointer()
+            pointer_coordinates = slide_widget.get_window().get_display().get_default_seat().get_pointer().get_position()
 
             if 0 < pointer_coordinates.x < ww and 0 < pointer_coordinates.y < wh \
                     and self.pointer_mode == PointerMode.CONTINUOUS:

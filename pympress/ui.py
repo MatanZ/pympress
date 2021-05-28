@@ -261,7 +261,7 @@ class UI(builder.Builder):
         self.p_frame_annot.set_visible(self.show_annotations)
         self.laser.activate_pointermode()
         self.pen_pointer_c = GdkPixbuf.Pixbuf.new_from_file(util.get_icon_path('pointer_green' + '.png'))
-        self.scribbler.pen_pointer_p = Gdk.Cursor(Gdk.CursorType.X_CURSOR).get_image()
+        self.scribbler.pen_pointer_p = Gdk.Cursor.new_for_display(self.p_win.get_display(), Gdk.CursorType.X_CURSOR).get_image()
         self.hlines = self.config.getfloat('presenter', 'horizontal_lines')
         self.vlines = self.config.getfloat('presenter', 'vertical_lines')
 
@@ -495,7 +495,7 @@ class UI(builder.Builder):
         """ Sets up the position of the windows.
         """
         # If multiple monitors, apply windows to monitors according to config
-        screen = self.p_win.get_screen()
+        screen = self.p_win.get_display()
         if screen.get_n_monitors() > 1:
             c_monitor = self.config.getint('content', 'monitor')
             p_monitor = self.config.getint('presenter', 'monitor')
@@ -517,7 +517,7 @@ class UI(builder.Builder):
                 logger.warning(_('Not starting content or presenter window full screen ' +
                                  'because there is only one monitor'))
 
-        p_bounds = screen.get_monitor_geometry(p_monitor)
+        p_bounds = screen.get_monitor(p_monitor).get_geometry()
         self.p_win.move(p_bounds.x, p_bounds.y)
         self.p_win.resize(p_bounds.width, p_bounds.height)
         if p_full:
@@ -525,7 +525,7 @@ class UI(builder.Builder):
         else:
             self.p_win.maximize()
 
-        c_bounds = screen.get_monitor_geometry(c_monitor)
+        c_bounds = screen.get_monitor(c_monitor).get_geometry()
         self.c_win.move(c_bounds.x, c_bounds.y)
         self.c_win.resize(c_bounds.width, c_bounds.height)
         if c_full:
@@ -595,14 +595,11 @@ class UI(builder.Builder):
             event (:class:`~Gdk.Event`):  the GTK event, which contains the new dimensions of the widget
         """
         if widget is self.p_win:
-            p_monitor = self.p_win.get_screen().get_monitor_at_window(self.p_central.get_parent_window())
-            self.config.set('presenter', 'monitor', str(p_monitor))
             cw = self.p_central.get_allocated_width()
             ch = self.p_central.get_allocated_height()
 
         elif widget is self.c_win:
-            c_monitor = self.c_win.get_screen().get_monitor_at_window(self.c_frame.get_parent_window())
-            self.config.set('content', 'monitor', str(c_monitor))
+            pass
 
 
     def redraw_selected(self):
@@ -1076,7 +1073,11 @@ class UI(builder.Builder):
                 return
 
             # Cache miss: render the page, and save it to the cache
-            pb = widget.get_window().create_similar_image_surface(cairo.Format.RGB24, ww, wh, 0)
+            try:
+                # In some pygtk versions this call always fails the first time
+                pb = widget.get_window().create_similar_image_surface(cairo.Format.RGB24, ww, wh, 0)
+            except:
+                pb = widget.get_window().create_similar_image_surface(cairo.Format.RGB24, ww, wh, 0)
 
             cairo_prerender = cairo.Context(pb)
             cairo_prerender.transform(zoom_matrix)
