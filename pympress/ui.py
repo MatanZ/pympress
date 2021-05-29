@@ -268,12 +268,13 @@ class UI(builder.Builder):
         self.scribbler.latex_dict = json.load(open(util.get_latex_dict()))
         self.scribbler.latex_macros = {
             "latex": { "ctrl": {}, "alt": {}, "altctrl": {}, },
+            "markup": { "ctrl": {}, "alt": {}, "altctrl": {}, },
             "text": { "ctrl": {}, "alt": {}, "altctrl": {}, },
         }
         try:
             personal_dict = json.load(open(util.get_personal_dict()))
             self.scribbler.latex_dict.update(personal_dict['shortcuts'])
-            for dicts in ('latex', 'text'):
+            for dicts in self.scribbler.latex_macros.keys():
                 for m in personal_dict[dicts].keys():
                     for k, v in personal_dict[dicts][m].items():
                         p = v.find("\f")

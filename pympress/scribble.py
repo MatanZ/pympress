@@ -369,8 +369,15 @@ class Scribbler(builder.Builder):
         if not self.text_entry or not self.scribble_list or not is_text(self.text_entry):
             return False
         mode = self.text_entry[0]
+        macros = mode
+        if mode == "text" and self.text_entry[5] and self.text_entry[5][0] == '\0':
+            macros = "markup"
+        print(f"unknown key, {val=}, {s=}, name={Gdk.keyval_name(val)} {state=}   {mode=} {macros=}")
         shortcuts = mode == "text"
         pos = self.text_pos
+        # ctrl-2 is special:
+        if val in (50, 64) and state & Gdk.ModifierType.CONTROL_MASK:
+            s = chr(val)
         if val in (Gdk.KEY_Escape, Gdk.KEY_Page_Down, Gdk. KEY_Page_Up):
             self.text_entry = False
             return val in (Gdk.KEY_Escape, )
@@ -402,7 +409,7 @@ class Scribbler(builder.Builder):
             mod = "alt" if state & Gdk.ModifierType.MOD1_MASK else ""
             mod += "ctrl" if state & Gdk.ModifierType.CONTROL_MASK else ""
             try:
-                s, p = self.latex_macros[mode][mod][chr(val)]
+                s, p = self.latex_macros[macros][mod][chr(val)]
                 self.text_entry[5] = self.text_entry[5][:pos] + s + self.text_entry[5][pos:]
                 pos += p
             except:
@@ -863,19 +870,37 @@ class Scribbler(builder.Builder):
                 cairo_context.stroke()
                 cairo_context.restore()
             elif stype == "text" or (stype == "latex" and widget is self.p_da_cur):
+                # This is really messed up.
+                # There are currently three modes: latex and text differentiated by stype.
+                # Markup mode is when text starts with '\0'.
+                # The actual text is always displayed on presenter, but on content it is replaced by rendered latex, or pango markup.
+                # Perhaps it is better to separate to three different paths (or more).
                 layout = PangoCairo.create_layout(cairo_context)
                 PangoCairo.context_set_resolution(layout.get_context(), 72 * pixels_per_point)
                 font = extra[1] if stype == "text" else "Roboto Mono Bold 12"
                 layout.set_font_description(Pango.FontDescription(font))
+                if extra[0] and extra[0][0] == '\0':
+                    markup = True
+                    text = extra[0][1:]
+                    if self.text_entry:
+                        text_pos = max(0, self.text_pos - 1)
+                else:
+                    markup = False
+                    text = extra[0]
+                    if self.text_entry:
+                        text_pos = self.text_pos
                 if self.text_entry is scribble and widget is self.c_da:
                     # Don't show tex shortcut
-                    i = extra[0].rfind('\\', 0, -1)
-                    if i > -1 and (i == len(extra[0]) - 1 or (i < len(extra[0]) - 1 and extra[0][i+1].isalnum())):
-                        layout.set_text(extra[0][:i])
+                    i = text.rfind('\\', 0, -1)
+                    if i > -1 and (i == len(text) - 1 or (i < len(text) - 1 and text[i+1].isalnum())):
+                        text = text[:i]
+                if markup:
+                    if widget is self.c_da:
+                        layout.set_markup(text)
                     else:
-                        layout.set_text(extra[0])
+                        layout.set_text(text)
                 else:
-                    layout.set_text(extra[0])
+                    layout.set_text(text)
                 if stype == "text":
                     cairo_context.set_source_rgba(*color)
                 else:
@@ -907,7 +932,7 @@ class Scribbler(builder.Builder):
                 PangoCairo.show_layout(cairo_context, layout)
 
                 if self.text_entry == scribble and widget is self.p_da_cur and self.draw_blink:
-                    cursor = layout.get_cursor_pos(len(bytearray(extra[0][:self.text_pos],"utf8")))
+                    cursor = layout.get_cursor_pos(len(bytearray(extra[0][:text_pos],"utf8")))
                     cur_x = x + cursor.strong_pos.x / Pango.SCALE
                     cur_y = y + cursor.strong_pos.y / Pango.SCALE
                     cur_y1 = cur_y + cursor.strong_pos.height / Pango.SCALE
