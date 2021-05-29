@@ -479,7 +479,7 @@ class Scribbler(builder.Builder):
                     self.stamps[name] = {
                         'name': name,
                         'type': 'text',
-                        'color': color,
+                        'color': rgba_to_tuple(color),
                         'font': p[1],
                         'str': p[2],
                     }
@@ -1026,13 +1026,13 @@ class Scribbler(builder.Builder):
         color = widget.get_rgba()
 
         if self.selected:
-            self.add_undo(('c', [[s, s[1], color] for s in self.selected]))
+            self.add_undo(('c', [[s, s[1], rgba_to_tuple(color)] for s in self.selected]))
             for s in self.selected:
-                s[1] = color
+                s[1] = rgba_to_tuple(color)
             widget.set_rgba(Gdk.RGBA(*self.scribble_color))
             return
         elif self.text_entry and self.scribble_list and self.scribble_list[-1][0] in ["text", "latex"]:
-            self.scribble_list[-1][1] = color
+            self.scribble_list[-1][1] = rgba_to_tuple(color)
             self.scribble_list[-1][6] = None
             self.scribble_list[-1][7] = ''
 
@@ -1049,11 +1049,11 @@ class Scribbler(builder.Builder):
         color = widget.get_rgba()
 
         if self.selected:
-            self.add_undo(('cf', [[s, s[5], color] for s in self.selected if has_fill(s)]))
+            self.add_undo(('cf', [[s, s[5], rgba_to_tuple(color)] for s in self.selected if has_fill(s)]))
             for s in self.selected:
                 if has_fill(s):
-                    s[5] = color
-            widget.set_rgba(self.fill_color)
+                    s[5] = rgba_to_tuple(color)
+            widget.set_rgba(*self.fill_color)
             return
         self.fill_color = rgba_to_tuple(color)
         self.buttons["fill_alpha"].set_value(color.alpha)
