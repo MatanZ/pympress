@@ -550,13 +550,31 @@ class Scribbler(builder.Builder):
         except ValueError:
             pass
 
+    def deepcopy(self, scribbles):
+        # This will cause a race condition. Leave for now.
+        saved = {}
+        for i in range(len(scribbles)):
+            s = scribbles[i]
+            if s[0] == 'latex':
+                if s[6]:
+                    saved[(i,6)] = s[6]
+                    s[6] = None
+            if s[0] == 'image':
+                saved[(i,5)] = s[5]
+                s[5] = None
+        res = copy.deepcopy(scribbles)
+        for pos, pix in saved.items():
+            scribbles[pos[0]][pos[1]] = pix
+            res[pos[0]][pos[1]] = pix
+        return res
+
     def copy(self):
-        self.clipboard = copy.deepcopy(self.selected)
+        self.clipboard = self.deepcopy(self.selected)
 
     def paste(self):
         if self.clipboard:
             # Allows for pasting multiple times
-            s = copy.deepcopy(self.clipboard)
+            s = self.deepcopy(self.clipboard)
             self.scribble_list.extend(s)
             self.add_undo(('a', s))
 
