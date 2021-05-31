@@ -710,6 +710,8 @@ class Document(object):
                                 scribble[1] = tuple(scribble[1]['rgba'])
                             if scribble[0] in ['box', 'ellipse'] and len(scribble) > 5 and 'rgba' in scribble[5]:
                                 scribble[5] = tuple(scribble[5]['rgba'])
+                            if scribble[0] in ['text', 'latex']:
+                                scribble[4] = [[0,0], [0,0]]
                             if scribble[0] in ['image', 'latex']:
                                 pp = 5 if scribble[0] == 'image' else 6
                                 try:
