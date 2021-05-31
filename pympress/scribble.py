@@ -585,6 +585,8 @@ class Scribbler(builder.Builder):
             s = self.deepcopy(self.clipboard)
             self.scribble_list.extend(s)
             self.add_undo(('a', s))
+            self.selected = s
+            self.enable_move()
 
     def select_all(self):
         self.selected = self.scribble_list[:]
