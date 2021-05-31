@@ -1104,7 +1104,7 @@ class Scribbler(builder.Builder):
         else:
             self.scribble_color = rgba_to_tuple(rgba)
             self.buttons["color_button"].set_rgba(rgba)
-            self.config.set('scribble', 'rgba', rgba.to_string())
+        self.config.set('scribble', 'color', rgba.to_string())
 
     def update_fill_alpha(self, widget, event, value):
         """ Callback for the fill alpha slider
@@ -1126,7 +1126,7 @@ class Scribbler(builder.Builder):
         else:
             self.fill_color = rgba_to_tuple(rgba)
             self.buttons["fill_color_button"].set_rgba(rgba)
-            self.config.set('scribble', 'rgba', rgba.to_string())
+        self.config.set('scribble', 'fill_color', rgba.to_string())
 
     def update_width(self, widget, event, value):
         """ Callback for the width chooser slider, to set scribbling width.
