@@ -773,10 +773,15 @@ class Document(object):
         if self.highlight_mode == "autopage":
             out_dict['scribbles'] = self.scribbles
             for scribbles in out_dict['scribbles'].values():
+                todel = []
                 for scribble in scribbles:
                     if scribble[0] == "latex":
                         scribble[6] = None
                         scribble[7] = ""
+                    if scribble[0] in ("text", "latex") and scribble[5] == "":
+                        todel.append(scribble)
+                for scribble in todel:
+                    scribbles.remove(scribble)
         out_dict['page_map'] = self.page_map
         if self.path:
             path = self.path
