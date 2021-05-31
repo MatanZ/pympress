@@ -529,12 +529,13 @@ class Scribbler(builder.Builder):
             self.set_stamp()
         self.redraw_current_slide()
 
-    def stamp_scribble(self, point):
-        if self.stamp['type'] == 'image':
-            return ["image", self.stamp['color'], self.scribble_width, [point], [[0, 0], [0, 0]], self.stamp['pixbuf']]
-        elif self.stamp['type'] == 'text':
-            return ["text", self.stamp['color'], self.scribble_width, [point], [[0, 0], [0, 0]],
-                                      self.stamp['str'], self.stamp['font'], 0]
+    def stamp_scribble(self, point, stamp=None):
+        if not stamp:
+            stamp = self.stamp
+        if stamp['type'] == 'image':
+            return ["image", stamp['color'], self.scribble_width, [point], [[0, 0], [0, 0]], stamp['pixbuf'], stamp['name']]
+        elif stamp['type'] == 'text':
+            return ["text", stamp['color'], self.scribble_width, [point], [[0, 0], [0, 0]], stamp['str'], stamp['font'], 0]
         return None
 
     def set_pen(self, name):
