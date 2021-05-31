@@ -381,6 +381,7 @@ class Scribbler(builder.Builder):
         if mode == "text" and self.text_entry[5] and self.text_entry[5][0] == '\0':
             macros = "markup"
         print(f"unknown key, {val=}, {s=}, name={Gdk.keyval_name(val)} {state=}   {mode=} {macros=}")
+        self.text_entry[4] = [[0, 0], [0, 0]]
         shortcuts = mode == "text"
         pos = self.text_pos
         # ctrl-2 is special:
@@ -392,7 +393,6 @@ class Scribbler(builder.Builder):
         elif val == Gdk.KEY_BackSpace:
             self.text_entry[5] = self.text_entry[5][:pos - 1] + self.text_entry[5][pos:]
             pos = pos - 1
-            self.text_entry[4] = [[0, 0], [0, 0]]
         elif val == Gdk.KEY_End:
             if state & Gdk.ModifierType.CONTROL_MASK:
                 pos = len(self.text_entry[5])
@@ -422,7 +422,6 @@ class Scribbler(builder.Builder):
                 pos += p
             except:
                 pass
-
         elif (31 < val < 65280 or val in (Gdk.KEY_Return, )) and s and not state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.MOD1_MASK):
             self.text_entry[5] = self.text_entry[5][:pos] + s + self.text_entry[5][pos:]
             pos = pos + 1
@@ -450,7 +449,6 @@ class Scribbler(builder.Builder):
                             pos = i + 1
                         except ValueError:
                             pass
-            self.text_entry[4] = [[0, 0], [0, 0]]
         else:
             #logger.debug(f"unknown key, {val=}, {s=}, name={Gdk.keyval_name(val)}")
             pass
