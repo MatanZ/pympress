@@ -100,7 +100,7 @@ def adjust_points(pts_l, dx, dy):
 def adjust_scribbles(scribbles, dx, dy):
     for s in scribbles:
         adjust_points(s[3], dx, dy)
-        if s[0] in ("segment", "box", "text", "ellipse"):
+        if s[0] in ("segment", "box", "ellipse", "text", "latex"):
             adjust_points(s[4], dx, dy)
 
 def has_fill(scribble):
@@ -676,7 +676,7 @@ class Scribbler(builder.Builder):
                                 self.select_rect[0][1] <= p[1] <= self.select_rect[1][1]):
                                 self.selected.append(scribble)
                                 break
-                    if scribble[0] in ("box", "text", "ellipse"):
+                    if scribble[0] in ("box", "text", "ellipse", "image", "latex"):
                         for p in scribble[4]:
                             if (self.select_rect[1][0] <= p[0] <= self.select_rect[0][0] or
                                 self.select_rect[0][0] <= p[0] <= self.select_rect[1][0]) and (
@@ -970,9 +970,9 @@ class Scribbler(builder.Builder):
 
                 if self.show_text_frames and widget is self.p_da_cur:
                     # For debugging - frame
-                    points = [(p[0] * ww, p[1] * wh) for p in rect]
-                    x0, y0 = points[0]
-                    x1, y1 = points[1]
+                    pts = [(p[0] * ww, p[1] * wh) for p in rect]
+                    x0, y0 = pts[0]
+                    x1, y1 = pts[1]
                     cairo_context.move_to(x0, y0)
                     cairo_context.line_to(x0, y1)
                     cairo_context.line_to(x1, y1)
@@ -993,7 +993,7 @@ class Scribbler(builder.Builder):
                         w = int((rect[1][0] - rect[0][0]) * ww)
                         h = int((rect[1][1] - rect[0][1]) * wh)
                         pixbuf = pixbuf.scale_simple(w, h, GdkPixbuf.InterpType.BILINEAR)
-                        if self.text_entry == scribble:
+                        if self.text_entry is scribble:
                             pixbuf = pixbuf.add_alpha(True, 255, 255, 255)
                     w, h = pixbuf.get_width(), pixbuf.get_height()
                     x, y = int(points[0][0]*ww), int(points[0][1]*wh)
