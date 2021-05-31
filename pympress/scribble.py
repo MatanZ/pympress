@@ -69,6 +69,14 @@ def add_point_rect_ordered(point, rect):
     elif point[1] > rect[1][1]:
         rect[1][1] = point[1]
 
+def bounding_rect(scribbles):
+    r = [list(scribbles[0][3][0]),list(scribbles[0][3][0])]
+    for i in scribbles:
+        pts = i[4]
+        for p in pts:
+            add_point_rect_ordered(p, r)
+    return r
+
 def intersects(p0, p1, scribble):
     """ Returns true if the line segment intersect the scribble
     """
@@ -1296,11 +1304,7 @@ class Scribbler(builder.Builder):
         if self.selected:
             self.drawing_mode = "move"
             self.show_button("move")
-            self.select_rect = [list(self.selected[0][3][0]),list(self.selected[0][3][0])]
-            for i in self.selected:
-                pts = i[4]
-                for p in pts:
-                    add_point_rect_ordered(p, self.select_rect)
+            self.select_rect = bounding_rect(self.selected)
             self.pen_pointer_p = Gdk.Cursor.new_for_display(Gdk.Display.get_default(), Gdk.CursorType.FLEUR).get_image()
         return True
 
