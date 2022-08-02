@@ -113,6 +113,6 @@ class PenEventLoop():
                     self.collect_coords['last'] = point
                     if evdev.ecodes.BTN_TOUCH in self.pressed_buttons:
                         GLib.idle_add(self.scribbler.evdev_callback_pen, point)
-                    elif evdev.ecodes.BTN_DIGI in self.pressed_buttons:
+                    elif evdev.ecodes.BTN_DIGI in self.pressed_buttons or not self.pressed_buttons:
                         GLib.idle_add(self.scribbler.evdev_callback_pointer, point)
                 pass
