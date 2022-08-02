@@ -967,7 +967,6 @@ class Scribbler(builder.Builder):
                     cairo_context.line_to(cur_x, cur_y1)
                     cairo_context.set_source_rgba(*color)
                     cairo_context.set_line_width(2)
-                    cairo_context.stroke()
 
                 if self.show_text_frames and widget is self.p_da_cur:
                     # For debugging - frame
@@ -982,7 +981,7 @@ class Scribbler(builder.Builder):
                     cairo_context.set_source_rgba(0,0,0,0.5)
                     cairo_context.set_line_width(1)
                     cairo_context.set_dash([4,2])
-                    cairo_context.stroke()
+                cairo_context.stroke()
             if stype in ["image", "latex"]:
                 pixbuf = extra[0] if stype == "image" else extra[1]
                 if not pixbuf and stype == "latex" and extra[0] != extra[2]:

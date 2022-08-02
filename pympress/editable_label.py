@@ -119,7 +119,7 @@ class EditableLabel(object):
         Returns:
             `bool`: whether the event was consumed
         """
-        if not self.editing or event.type != Gdk.EventType.KEY_PRESS:
+        if not self.editing or not event or event.type != Gdk.EventType.KEY_PRESS:
             return False
 
         if command == 'validate':
