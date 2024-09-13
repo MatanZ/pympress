@@ -180,6 +180,7 @@ class Scribbler(builder.Builder):
     pen_pointer = None
     #:
     pen_event = None
+    have_pen = False
 
     #: Number of last set predefined pen attributes
     pen_num = -1
@@ -234,10 +235,9 @@ class Scribbler(builder.Builder):
         self.config = config
 
         self.pen_event = evdev_pad.PenEventLoop(self)
-        if self.pen_event.pen_thread:
-            self.pen_pointer = builder.pen_pointer
-        else:
-            self.pen_event = None
+        if self.pen_event.have_dev:
+            self.have_pen = True
+        self.pen_pointer = builder.pen_pointer
         self.min_distance = builder.min_distance
 
         self.read_stamps(config)
@@ -610,7 +610,7 @@ class Scribbler(builder.Builder):
         self.redraw_current_slide()
 
     def set_pointer(self, point):
-        if self.pen_pointer:
+        if self.have_pen and self.pen_pointer is not None and point:
             # The event thread might start running a bit too early
             self.pen_pointer[0] = point
             self.redraw_current_slide()
@@ -626,7 +626,7 @@ class Scribbler(builder.Builder):
             `bool`: whether the event was consumed
         """
         if self.scribble_drawing:
-            if self.pen_pointer is not None:
+            if self.have_pen and self.pen_pointer is not None:
                 self.pen_pointer[0] = point
             if button[0]:
                 self.drag_button = button[1]
@@ -817,7 +817,7 @@ class Scribbler(builder.Builder):
                 self.scribble_list[-1][4] = [x[:] for x in self.scribble_list[-1][3]]
 
             self.scribble_drawing = False
-            if self.pen_pointer:
+            if self.have_pen and self.pen_pointer is not None:
                 self.pen_pointer[0] = []
             return True
 
