@@ -261,7 +261,7 @@ class UI(builder.Builder):
         self.p_frame_annot.set_visible(self.show_annotations)
         self.laser.activate_pointermode()
         self.pen_pointer_c = GdkPixbuf.Pixbuf.new_from_file(util.get_icon_path('pointer_green' + '.png'))
-        self.scribbler.pen_pointer_p = Gdk.Cursor.new_for_display(self.p_win.get_display(), Gdk.CursorType.X_CURSOR).get_image()
+        self.scribbler.pen_pointer_p = Gdk.Cursor.new_from_name(self.p_win.get_display(), "help").get_image()
         self.hlines = self.config.getfloat('presenter', 'horizontal_lines')
         self.vlines = self.config.getfloat('presenter', 'vertical_lines')
 

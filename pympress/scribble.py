@@ -1230,15 +1230,15 @@ class Scribbler(builder.Builder):
 
     def enable_tool(self, tool, *args):
         pointer_dict = {
-            "erase": Gdk.CursorType.CENTER_PTR,
-            "draw": Gdk.CursorType.PENCIL,
-            "box": Gdk.CursorType.DOTBOX,
-            "line": Gdk.CursorType.DRAFT_SMALL,
-            "text":  Gdk.CursorType.XTERM,
-            "ellipse": Gdk.CursorType.CIRCLE,
-            "stamp": Gdk.CursorType.BLANK_CURSOR,
-            "select_t": Gdk.CursorType.HAND1,
-            "latex":  Gdk.CursorType.XTERM,
+            "erase": "dnd-no-drop",
+            "draw": "pencil",
+            "box": "bottom_right_corner",
+            "line": "nwse-resize",
+            "text":  "xterm",
+            "ellipse": "circle",
+            "stamp": "none",
+            "select_t": "grab",
+            "latex":  "xterm",
         }
         self.drawing_mode = tool
         self.show_button(tool)
@@ -1247,7 +1247,7 @@ class Scribbler(builder.Builder):
         self.select_rect = [[],[]]
         if tool not in ["text", "latex"]:
             self.text_entry = False
-        self.pen_pointer_p = Gdk.Cursor.new_for_display(Gdk.Display.get_default(), pointer_dict[tool]).get_image()
+        self.pen_pointer_p = Gdk.Cursor.new_from_name(Gdk.Display.get_default(), pointer_dict[tool]).get_image()
         return True
 
     def enable_erase(self, *args):
