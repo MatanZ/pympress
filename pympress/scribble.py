@@ -380,7 +380,7 @@ class Scribbler(builder.Builder):
         macros = mode
         if mode == "text" and self.text_entry[5] and self.text_entry[5][0] == '\0':
             macros = "markup"
-        print(f"unknown key, {val=}, {s=}, name={Gdk.keyval_name(val)} {state=}   {mode=} {macros=}")
+        #print(f"unknown key, {val=}, {s=}, name={Gdk.keyval_name(val)} {state=}   {mode=} {macros=}")
         self.text_entry[4] = [[0, 0], [0, 0]]
         shortcuts = mode == "text"
         pos = self.text_pos
