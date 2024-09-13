@@ -56,6 +56,9 @@ class PenEventLoop():
             self.pen_thread = threading.Thread(target=self.pen_event_loop, daemon=True)
             if self.pen_thread:
                 self.pen_thread.start()
+                script = self.scribbler.config.get('penpad', "connect_script")
+                if script:
+                    os.system(script)
         else:
             return
         try:

@@ -726,6 +726,11 @@ class UI(builder.Builder):
         self.config.save_config()
         self.p_win.destroy()
         self.c_win.destroy()
+
+        script = self.config.get('penpad', "quit_script")
+        if script:
+            os.system(script)
+
         Gtk.main_quit()
 
 
