@@ -727,7 +727,7 @@ class UI(builder.Builder):
         self.p_win.destroy()
         self.c_win.destroy()
 
-        script = self.config.get('penpad', "quit_script")
+        script = self.config.get('penpad', "quit_script", fallback=None)
         if script:
             os.system(script)
 

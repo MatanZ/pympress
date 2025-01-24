@@ -56,13 +56,13 @@ class PenEventLoop():
             self.pen_thread = threading.Thread(target=self.pen_event_loop, daemon=True)
             if self.pen_thread:
                 self.pen_thread.start()
-                script = self.scribbler.config.get('penpad', "connect_script")
+                script = self.scribbler.config.get('penpad', "connect_script", fallback=None)
                 if script:
                     os.system(script)
         else:
             return
         try:
-            self.buttons_dev = self.find_device(evdev.ecodes.BTN_7)
+            self.buttons_dev = self.find_device(evdev.ecodes.BTN_4)
         except NameError:
             return
         if self.buttons_dev:
